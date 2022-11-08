@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linear Problem &mdash; InterfaceSolver  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Nonlinear Problem" href="../example3/example3.html" />
+    <link rel="prev" title="Build a Discontunuous mesh" href="../example1/example1.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> InterfaceSolver
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../src.InterfaceSolver.html">src.InterfaceSolver package</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../examples.html">examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../example1/example1.html">Build a Discontunuous mesh</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Linear Problem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#problem-description">Problem Description</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation">Implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../example3/example3.html">Nonlinear Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../example4/example4.html">Point-wise Dirichlet conditions</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">InterfaceSolver</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../examples.html">examples</a> &raquo;</li>
+      <li>Linear Problem</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/demos/example2/example2.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="linear-problem">
+<h1>Linear Problem<a class="headerlink" href="#linear-problem" title="Permalink to this headline"></a></h1>
+<section id="problem-description">
+<h2>Problem Description<a class="headerlink" href="#problem-description" title="Permalink to this headline"></a></h2>
+<p>Let us consider square domain divided into two parts. We will solve laplace
+equation in both parts of the domain. We prescribe standard boundary conditions
+on the sides od the domain (see the figure below). Moreower, it is necessary to
+set the interace conditions.</p>
+<a class="reference internal image-reference" href="../../_images/laplace_problem.png"><img alt="../../_images/laplace_problem.png" src="../../_images/laplace_problem.png" style="width: 585.75px; height: 384.75px;" /></a>
+<p>We can write the weak formulation in the following form.</p>
+<div class="math notranslate nohighlight">
+\[\int_{\Omega_1} \nabla u_1 \nabla \varphi_1 \;dx
+- \int_{\Gamma} (\nabla u_0 \cdot n) \varphi_1 \;ds \quad \forall \varphi_1
+\in W^{1,2}_{\Omega}; \; \psi = 0 \text{ on top } \}\]</div>
+<div class="math notranslate nohighlight">
+\[\int_{\Omega_0} \nabla u_0 \nabla \varphi_0 \;dx \quad \forall \varphi_0 \in
+\{ \psi : W^{1,2}_{\Omega}; \; \psi = 0 \text{ on bottom and at } \Gamma \}\]</div>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline"></a></h2>
+<p>For this example we will need to import LinearInterfaceSolver and interface.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">InterfaceSolver</span> <span class="kn">import</span> <span class="n">LinearInterfaceSolver</span>
+<span class="kn">from</span> <span class="nn">InterfaceSolver</span> <span class="kn">import</span> <span class="n">interface</span>
+</pre></div>
+</div>
+<p>We load the mesh and we build marks on subsets. Moreover we will crate a Measure
+dX, which takes into acount the subdomains.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="s2">&quot;mesh/mesh.xml&quot;</span><span class="p">)</span>
+<span class="n">marker</span> <span class="o">=</span> <span class="n">MeshFunction</span><span class="p">(</span><span class="s2">&quot;size_t&quot;</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mesh</span><span class="o">.</span><span class="n">topology</span><span class="p">()</span><span class="o">.</span><span class="n">dim</span><span class="p">(),</span> <span class="mi">0</span><span class="p">)</span>
+<span class="c1"># mark cells ... 1 bottom ; 0 top</span>
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+    <span class="n">marker</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">midpoint</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span>
+
+<span class="n">dX</span> <span class="o">=</span> <span class="n">Measure</span><span class="p">(</span><span class="s2">&quot;dx&quot;</span><span class="p">)(</span><span class="n">domain</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">subdomain_data</span><span class="o">=</span><span class="n">marker</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then we label parts of the boundaries.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># boundary</span>
+<span class="n">top</span> <span class="o">=</span>  <span class="n">CompiledSubDomain</span><span class="p">(</span><span class="s2">&quot;near(x[1], top) &amp;&amp; on_boundary&quot;</span><span class="p">,</span> <span class="n">top</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="n">bottom</span> <span class="o">=</span> <span class="n">CompiledSubDomain</span><span class="p">(</span><span class="s2">&quot;near(x[1], bottom) &amp;&amp; on_boundary&quot;</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">middle</span> <span class="o">=</span> <span class="n">CompiledSubDomain</span><span class="p">(</span><span class="s2">&quot;near(x[1], middle) &quot;</span><span class="p">,</span> <span class="n">middle</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">)</span>
+
+<span class="n">bcb</span> <span class="o">=</span> <span class="n">DirichletBC</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">),</span><span class="n">bottom</span><span class="p">)</span>
+<span class="n">bct</span> <span class="o">=</span> <span class="n">DirichletBC</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">Constant</span><span class="p">((</span><span class="mf">1.0</span><span class="p">)),</span> <span class="n">top</span><span class="p">)</span>
+<span class="n">bcm</span> <span class="o">=</span> <span class="n">DirichletBC</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">Constant</span><span class="p">((</span><span class="mf">0.0</span><span class="p">)),</span> <span class="n">middle</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Further we need to create function spaces and functions similarly as in FEniCS.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># function space</span>
+<span class="n">V</span> <span class="o">=</span> <span class="n">FunctionSpace</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span><span class="s1">&#39;CG&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">TestFunction</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+<span class="n">u</span> <span class="o">=</span> <span class="n">TrialFunction</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+<span class="n">sol</span> <span class="o">=</span> <span class="n">Function</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We label the interface facets boundary. We use for that function interface, but
+it can be done in a different way.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">interface_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">y</span><span class="o">-</span><span class="mf">0.5</span>
+<span class="n">interface_marker</span> <span class="o">=</span> <span class="n">interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">interface_func</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We will define UFL forms</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># right-hand side</span>
+<span class="n">a1</span> <span class="o">=</span> <span class="n">inner</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">grad</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="o">*</span><span class="n">dX</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># bottom</span>
+<span class="n">a0</span> <span class="o">=</span> <span class="n">inner</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">grad</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="o">*</span><span class="n">dX</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># top</span>
+
+<span class="c1"># left hand side</span>
+<span class="n">f1</span> <span class="o">=</span> <span class="n">Expression</span><span class="p">(</span><span class="s1">&#39;exp(-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5) )&#39;</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">l1</span> <span class="o">=</span> <span class="mf">10.0</span><span class="o">*</span><span class="n">f1</span><span class="o">*</span><span class="n">v</span><span class="o">*</span><span class="n">dX</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">f0</span> <span class="o">=</span> <span class="n">Expression</span><span class="p">(</span><span class="s1">&#39;exp(-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5) )&#39;</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">l0</span> <span class="o">=</span> <span class="o">-</span><span class="mf">10.0</span><span class="o">*</span><span class="n">f0</span><span class="o">*</span><span class="n">v</span><span class="o">*</span><span class="n">dX</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For solving the problem, the class LinearInterfaceSolver has to be initialised.
+Afterwards the we will call method solve.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># solve</span>
+<span class="n">solver</span> <span class="o">=</span> <span class="n">LinearInterfaceSolver</span><span class="p">(</span>
+    <span class="n">sol</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">interface_marker</span><span class="p">,</span> <span class="n">interface_value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cell_val</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a_interface</span><span class="p">,</span> <span class="n">l0</span><span class="o">=</span><span class="n">l0</span><span class="p">,</span> <span class="n">l1</span><span class="o">=</span><span class="n">l1</span><span class="p">,</span> <span class="n">l_interface</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+         <span class="n">bcs0</span><span class="o">=</span><span class="p">[</span><span class="n">bct</span><span class="p">],</span> <span class="n">bcs1</span><span class="o">=</span><span class="p">[</span><span class="n">bcb</span><span class="p">],</span> <span class="n">bcs_zero1</span><span class="o">=</span><span class="p">[</span><span class="n">bcm</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Then the result can be stored</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># save and plot</span>
+<span class="n">sol</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span><span class="s1">&#39;u&#39;</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">XDMFFile</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">.xdmf&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span><span class="s1">&#39;u&#39;</span><span class="p">)</span> <span class="p">)</span> <span class="k">as</span> <span class="n">xdmf</span><span class="p">:</span>
+    <span class="n">xdmf</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;flush_output&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">xdmf</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;functions_share_mesh&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">xdmf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">sol</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../example1/example1.html" class="btn btn-neutral float-left" title="Build a Discontunuous mesh" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../example3/example3.html" class="btn btn-neutral float-right" title="Nonlinear Problem" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Jakub Fara.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.InterfaceSolver.NonlinearInterfaceSolver &mdash; InterfaceSolver  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> InterfaceSolver
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../src.InterfaceSolver.html">src.InterfaceSolver package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">examples</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">InterfaceSolver</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>src.InterfaceSolver.NonlinearInterfaceSolver</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.InterfaceSolver.NonlinearInterfaceSolver</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">petsc4py</span>
+<span class="n">petsc4py</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">petsc4py</span> <span class="kn">import</span> <span class="n">PETSc</span>
+<span class="kn">from</span> <span class="nn">dolfin</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PETScVector</span><span class="p">,</span> <span class="n">assemble</span><span class="p">,</span> <span class="n">PETScMatrix</span><span class="p">,</span> <span class="n">derivative</span><span class="p">,</span> <span class="n">SystemAssembler</span><span class="p">,</span> <span class="n">Form</span><span class="p">,</span> 
+    <span class="n">as_backend_type</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">DirichletBC</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="kn">from</span> <span class="nn">InterfaceSolver.InterfaceSolver</span> <span class="kn">import</span> <span class="n">InterfaceSolver</span>
+<span class="kn">from</span> <span class="nn">InterfaceSolver.options</span> <span class="kn">import</span> <span class="n">opts_setup</span><span class="p">,</span> <span class="n">DEFAULT_OPTIONS</span>
+
+
+<div class="viewcode-block" id="NonlinearInterfaceSolver"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.NonlinearInterfaceSolver">[docs]</a><span class="k">class</span> <span class="nc">NonlinearInterfaceSolver</span><span class="p">(</span><span class="n">InterfaceSolver</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">cell_func</span><span class="p">,</span>
+                 <span class="n">interface_func</span><span class="p">,</span> <span class="n">comm</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">interface_value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cell_val</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is init</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a0</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a1</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">da0</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">da1</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">monitor</span> <span class="o">=</span> <span class="n">monitor</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">u</span><span class="p">,</span><span class="n">cell_func</span><span class="p">,</span>
+                         <span class="n">interface_func</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">,</span>
+                         <span class="n">interface_value</span><span class="o">=</span><span class="n">interface_value</span><span class="p">,</span> <span class="n">cell_val</span><span class="o">=</span><span class="n">cell_val</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">as_backend_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">vector</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_petsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">vec</span><span class="p">()</span>
+
+<div class="viewcode-block" id="NonlinearInterfaceSolver.update_x"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.NonlinearInterfaceSolver.update_x">[docs]</a>    <span class="k">def</span> <span class="nf">update_x</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a PETSc Vec x, update thex storag of our solution function u.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_petsc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">update_ghost_values</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="NonlinearInterfaceSolver.F"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.NonlinearInterfaceSolver.F">[docs]</a>    <span class="k">def</span> <span class="nf">F</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snes</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">F</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_x</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  
+        <span class="n">F0</span> <span class="o">=</span> <span class="n">PETScVector</span><span class="p">()</span>
+        <span class="n">F1</span> <span class="o">=</span> <span class="n">PETScVector</span><span class="p">()</span>
+        <span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a0</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">F0</span><span class="p">)</span>
+        <span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a1</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">F1</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero0</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">F0</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero1</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">F1</span><span class="p">)</span>
+
+        <span class="n">x</span><span class="o">.</span><span class="n">assemble</span><span class="p">()</span>
+        <span class="n">F</span><span class="o">.</span><span class="n">zeroEntries</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assemble_interface</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">a_interface</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a1</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">a0</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">F</span><span class="p">,</span> <span class="n">finalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">space</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">sign</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_interface</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assemble_dirichlet_interface_vector</span><span class="p">(</span>
+                <span class="n">F</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">vec</span><span class="p">(),</span> <span class="n">space</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">sign</span>
+            <span class="p">)</span>
+        
+        <span class="n">F_</span>  <span class="o">=</span> <span class="n">PETScVector</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
+        <span class="n">F_</span><span class="o">.</span><span class="n">update_ghost_values</span><span class="p">()</span>
+        <span class="n">F_</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="s1">&#39;add&#39;</span><span class="p">)</span>
+        <span class="n">F_</span><span class="o">.</span><span class="n">axpy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">F1</span><span class="p">)</span>
+        <span class="n">F_</span><span class="o">.</span><span class="n">axpy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">F0</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs0</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">F_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+            
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs1</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">F_</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+            
+        <span class="n">F_</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="s1">&#39;add&#39;</span><span class="p">)</span>
+        <span class="n">F_</span><span class="o">.</span><span class="n">update_ghost_values</span><span class="p">()</span></div>
+                          
+<div class="viewcode-block" id="NonlinearInterfaceSolver.J"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.NonlinearInterfaceSolver.J">[docs]</a>    <span class="k">def</span> <span class="nf">J</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snes</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">P</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_x</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">A0</span> <span class="o">=</span> <span class="n">PETScMatrix</span><span class="p">()</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">PETScMatrix</span><span class="p">()</span>
+        <span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">da0</span> <span class="p">,</span> <span class="n">tensor</span> <span class="o">=</span> <span class="n">A0</span><span class="p">,</span> <span class="n">keep_diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">da1</span> <span class="p">,</span> <span class="n">tensor</span> <span class="o">=</span> <span class="n">A1</span><span class="p">,</span> <span class="n">keep_diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero0</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">zero</span><span class="p">(</span><span class="n">A0</span><span class="p">)</span>
+            
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero1</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">zero</span><span class="p">(</span><span class="n">A1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assemble_interface</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">da_interface</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">da1</span><span class="p">,</span> <span class="n">tensor</span> <span class="o">=</span> <span class="n">J</span><span class="p">,</span> <span class="n">finalize</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">space</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">sign</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_interface</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assemble_dirichlet_interface_tensor</span><span class="p">(</span>
+                <span class="n">J</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">vec</span><span class="p">(),</span> <span class="n">space</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">sign</span>
+        <span class="p">)</span>
+        <span class="n">J</span><span class="o">.</span><span class="n">assemble</span><span class="p">()</span>
+        <span class="n">J_</span> <span class="o">=</span> <span class="n">PETScMatrix</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+        
+        <span class="n">J_</span><span class="o">.</span><span class="n">axpy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">A0</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">J_</span><span class="o">.</span><span class="n">axpy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">A1</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs0</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">J_</span><span class="p">)</span>
+            
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcs1</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">J_</span><span class="p">)</span>
+        
+        <span class="n">J</span><span class="o">.</span><span class="n">assemble</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="NonlinearInterfaceSolver.solve"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.NonlinearInterfaceSolver.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a_interface</span><span class="p">,</span>
+            <span class="n">bcs0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bcs1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bcs_zero0</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">bcs_zero1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">force_equality</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dirichlet_interface</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">a0</span> <span class="o">=</span> <span class="n">a0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a1</span> <span class="o">=</span> <span class="n">a1</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">a_interface</span> <span class="o">=</span> <span class="n">a_interface</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">da0</span> <span class="o">=</span> <span class="n">derivative</span><span class="p">(</span><span class="n">a0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">da1</span> <span class="o">=</span> <span class="n">derivative</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">da_interface</span> <span class="o">=</span> <span class="n">derivative</span><span class="p">(</span><span class="n">a_interface</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bcs0</span> <span class="o">=</span> <span class="n">bcs0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bcs1</span> <span class="o">=</span> <span class="n">bcs1</span>
+        <span class="k">if</span> <span class="n">bcs_zero0</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero0</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero0</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">bcs_zero0</span><span class="p">]</span>
+            
+        <span class="k">if</span> <span class="n">bcs_zero1</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero1</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bcs_zero1</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">bcs_zero1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">force_equality</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">force_equality</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">force_equality</span> <span class="o">=</span> <span class="n">force_equality</span>
+        
+        <span class="k">if</span> <span class="n">dirichlet_interface</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_interface</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_interface</span> <span class="o">=</span> <span class="n">dirichlet_interface</span>
+        
+        <span class="c1"># for space, _, sign in self.dirichlet_interface:</span>
+        <span class="c1">#     V = self.V</span>
+        <span class="c1">#     for i in space:</span>
+        <span class="c1">#         V = V.sub(i)</span>
+        <span class="c1">#     if sign == &#39;+&#39;:</span>
+        <span class="c1">#         self.bcs_zero1.append(</span>
+        <span class="c1">#             DirichletBC(</span>
+        <span class="c1">#                 V, 0.0, self.interface_func, self.interface_value)</span>
+        <span class="c1">#             )</span>
+        <span class="c1">#     else:</span>
+        <span class="c1">#         self.bcs_zero0.append(</span>
+        <span class="c1">#             DirichletBC(</span>
+        <span class="c1">#                 V, 0.0, self.interface_func, self.interface_value)</span>
+        <span class="c1">#             )</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">form_compiler_parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;optimize&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+        <span class="k">if</span> <span class="s2">&quot;form_compiler_parameters&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">form_compiler_parameters</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;form_compiler_parameters&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assembler</span> <span class="o">=</span> <span class="n">SystemAssembler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">da0</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">da1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a0</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">a1</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">bcs0</span><span class="p">,</span> <span class="n">form_compiler_parameters</span><span class="o">=</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">form_compiler_parameters</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">A_dolfin</span> <span class="o">=</span> <span class="n">PETScMatrix</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assembler</span><span class="o">.</span><span class="n">init_global_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_dolfin</span><span class="p">,</span> <span class="n">Form</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">da0</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">da1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">A_petsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_dolfin</span><span class="o">.</span><span class="n">mat</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">A_petsc</span><span class="o">.</span><span class="n">createVecRight</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="o">.</span><span class="n">axpy</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x_petsc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b_petsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_petsc</span><span class="o">.</span><span class="n">createVecLeft</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_solver</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">monitor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setFromOptions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setSolution</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">subspace</span><span class="p">,</span> <span class="n">sign</span> <span class="ow">in</span>  <span class="bp">self</span><span class="o">.</span><span class="n">force_equality</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assign_interface</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">vec</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">vec</span><span class="p">(),</span> <span class="n">subspace</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">update_ghost_values</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="NonlinearInterfaceSolver.set_solver"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.NonlinearInterfaceSolver.set_solver">[docs]</a>    <span class="k">def</span> <span class="nf">set_solver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">SNES</span><span class="p">()</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ksp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">getKSP</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setFunction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">F</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_petsc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setJacobian</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_petsc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setSolution</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">computeFunction</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="p">,</span>  <span class="bp">self</span><span class="o">.</span><span class="n">b_petsc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">computeJacobian</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">xx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_petsc</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">monitor</span><span class="o">==</span><span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setMonitor</span><span class="p">(</span><span class="n">SNESMonitor</span><span class="p">())</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">DEFAULT_OPTIONS</span>
+
+        <span class="n">opts_setup</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snes</span><span class="o">.</span><span class="n">setFromOptions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ksp</span><span class="o">.</span><span class="n">setFromOptions</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="SNESMonitor"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.SNESMonitor">[docs]</a><span class="k">class</span> <span class="nc">SNESMonitor</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">line</span><span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">*</span><span class="mi">50</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">print</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Sys</span><span class="o">.</span><span class="n">Print</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snes</span><span class="p">,</span> <span class="n">its</span><span class="p">,</span> <span class="n">rnorm</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="o">==</span><span class="kc">True</span><span class="p">:</span>
+            <span class="n">s</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%6s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;it&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%5s</span><span class="s1"> &#39;</span><span class="o">%</span> <span class="s1">&#39;|&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%10s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="s2">&quot;rnorm&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span><span class="kc">False</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">%6d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">its</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%5s</span><span class="s1"> &#39;</span><span class="o">%</span> <span class="s1">&#39;|&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">rnorm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+        <span class="n">xnorm</span><span class="o">=</span><span class="n">snes</span><span class="o">.</span><span class="n">vec_sol</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">NormType</span><span class="o">.</span><span class="n">NORM_2</span><span class="p">)</span>
+        <span class="n">ynorm</span><span class="o">=</span><span class="n">snes</span><span class="o">.</span><span class="n">vec_upd</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">NormType</span><span class="o">.</span><span class="n">NORM_2</span><span class="p">)</span>
+        <span class="n">iterating</span> <span class="o">=</span> <span class="p">(</span><span class="n">snes</span><span class="o">.</span><span class="n">callConvergenceTest</span><span class="p">(</span><span class="n">its</span><span class="p">,</span> <span class="n">xnorm</span><span class="p">,</span> <span class="n">ynorm</span><span class="p">,</span> <span class="n">snes</span><span class="o">.</span><span class="n">norm</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">iterating</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Convergence reason: </span><span class="si">{0}</span><span class="s2">    &quot;</span>
+                <span class="s2">&quot;iterations = </span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">snes</span><span class="o">.</span><span class="n">reason</span><span class="p">,</span><span class="n">its</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line</span><span class="p">)</span>
+            
+<div class="viewcode-block" id="SNESMonitor.info"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.SNESMonitor.info">[docs]</a>    <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">s</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">(</span><span class="n">s</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="KSPMonitor"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.NonlinearInterfaceSolver.KSPMonitor">[docs]</a><span class="k">class</span> <span class="nc">KSPMonitor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;KSP&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">name</span>
+        
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ksp</span><span class="p">,</span> <span class="n">its</span><span class="p">,</span> <span class="n">rnorm</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">its</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rnorm0</span> <span class="o">=</span> <span class="n">rnorm</span>
+            <span class="n">PETSc</span><span class="o">.</span><span class="n">Sys</span><span class="o">.</span><span class="n">Print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ksp</span><span class="o">.</span><span class="n">iterating</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">its</span><span class="o">==</span><span class="mi">1</span><span class="p">)</span> <span class="p">:</span>
+                    <span class="n">PETSc</span><span class="o">.</span><span class="n">Sys</span><span class="o">.</span><span class="n">Print</span><span class="p">((</span>
+                        <span class="p">(</span><span class="s1">&#39;</span><span class="si">%6s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;it&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;l2-norm&quot;</span><span class="p">)</span> <span class="o">+</span> 
+                        <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;rel l2-norm&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;l1-norm&quot;</span><span class="p">)</span> <span class="o">+</span> 
+                        <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;inf-norm&quot;</span><span class="p">)</span><span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s2">&quot;energy-norm&quot;</span><span class="p">)</span>
+                    <span class="p">))</span>
+                <span class="n">r</span><span class="o">=</span><span class="n">ksp</span><span class="o">.</span><span class="n">buildResidual</span><span class="p">()</span>
+                <span class="n">rn1</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">NormType</span><span class="o">.</span><span class="n">NORM_1</span><span class="p">)</span>
+                <span class="n">rn2</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">NormType</span><span class="o">.</span><span class="n">NORM_2</span><span class="p">)</span>
+                <span class="n">rni</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">NormType</span><span class="o">.</span><span class="n">NORM_INFINITY</span><span class="p">)</span>
+                <span class="n">rne</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ksp</span><span class="o">.</span><span class="n">vec_sol</span><span class="p">)</span>
+                <span class="n">PETSc</span><span class="o">.</span><span class="n">Sys</span><span class="o">.</span><span class="n">Print</span><span class="p">(</span>
+                    <span class="p">(</span><span class="s1">&#39;</span><span class="si">%6d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">its</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">rnorm</span><span class="p">)</span> <span class="o">+</span> 
+                    <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rnorm</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">rnorm0</span><span class="p">))</span><span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rn1</span><span class="p">))</span><span class="o">+</span> 
+                    <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rni</span><span class="p">))</span><span class="o">+</span> <span class="p">(</span><span class="s1">&#39; </span><span class="si">%12.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rne</span><span class="p">))</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">PETSc</span><span class="o">.</span><span class="n">Sys</span><span class="o">.</span><span class="n">Print</span><span class="p">((</span><span class="s2">&quot;Result: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ksp</span><span class="o">.</span><span class="n">reason</span><span class="p">)))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="o">.</span><span class="n">ksp_its</span><span class="o">=</span><span class="n">its</span></div>
+                
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Jakub Fara.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
