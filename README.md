@@ -1,4 +1,4 @@
-![](docs/pics/Images/logo.png )
+![](docs/pics/logo.png )
 
 ## Instalation
 
