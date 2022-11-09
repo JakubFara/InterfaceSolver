@@ -80,6 +80,14 @@ dirichlet_bcs = [
     (( ), Discontinuity(), bottom_sign)
 ]
 
+params = {
+    'snes_': {
+        'rtol': 1.e-10,
+        'atol': 1.e-10,
+        'stol': 1.e-10,
+        'max_it': 40
+    }
+}
 # solve
 Solver = NonlinearInterfaceSolver(
     u, marker, interface, interface_value=1, cell_val=cell_val, params=None)
