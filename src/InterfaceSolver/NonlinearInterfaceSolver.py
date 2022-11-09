@@ -200,10 +200,12 @@ class NonlinearInterfaceSolver(InterfaceSolver):
 
         if monitor==True:
             self.snes.setMonitor(SNESMonitor())
-        if not params:
-            params = DEFAULT_OPTIONS
+        # set default parameters
+        opts_setup(DEFAULT_OPTIONS)
+        # if params has been set rewrite the DEFAULT_PARAMETERS
+        if params:
+            opts_setup(params)
 
-        opts_setup(params)
         self.snes.setFromOptions()
         self.ksp.setFromOptions()
 
