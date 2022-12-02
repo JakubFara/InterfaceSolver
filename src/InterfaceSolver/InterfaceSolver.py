@@ -6,7 +6,7 @@ petsc4py.init()
 from petsc4py import PETSc
 import numpy as np
 from dolfin.fem.assembling import _create_dolfin_form
-from dolfin import facets, Cell, PETScMatrix, assemble, PETScVector, info
+from dolfin import facets, Cell, entities, assemble, PETScVector, info
 
 
 PETSc_MAT_NEW_NONZERO_ALLOCATION_ERR = 19
@@ -68,8 +68,8 @@ class InterfaceSolver(object):
 
         """
         facets_list = []
-        for f in facets(self.mesh):
-            if len(f.entities(2)) != 1 or self.interface_func[f] !=self.interface_value:
+        for f in entities(self.mesh, self.dim - 1):
+            if len(f.entities(2)) != 1 or self.interface_func[f] != self.interface_value:
                 continue
             facets_list.append(f)
 
@@ -78,31 +78,36 @@ class InterfaceSolver(object):
         
         size = self.comm.allreduce(sendobj=size_local, op=MPI.MAX)
         
-        X = np.zeros((size,2))
+        X = np.zeros((size,  self.dim))
         X.fill(np.nan)
-        orientation = np.zeros((size, 2),dtype='int32')
-        local_facet = np.zeros((size, 2),dtype='int32')
-        dof_coordinates = np.zeros((size, self.dim*3, 2), dtype = 'double')
-        dofmap = np.zeros((size, self.dofs_in_cell, 2), dtype = 'int32')
+        orientation = np.zeros((size, 2), dtype='int32')
+        local_facet = np.zeros((size, 2), dtype='int32')
+        dof_coordinates = np.zeros((size, self.dim*(self.dim + 1), 2), dtype='double')
+        dofmap = np.zeros((size, self.dofs_in_cell, 2), dtype='int32')
         cells = np.full((size, 2), -1, dtype='int32')
 
         my_indices = []
         i = 0
         for f in facets_list:
-            cell_index = f.entities(2)[0]
+            cell_index = f.entities(self.dim)[0]
             c = Cell(self.mesh,cell_index)
             index = 1
             if self.cell_func[c] == self.cell_val:
                 index = 0
-            lf = FEniCScpp.local_facet(f,c)
-            o = FEniCScpp.orientation(c,lf)
+            lf = FEniCScpp.local_facet(f, c)
+            o = FEniCScpp.orientation(c, lf)
             dc = c.get_coordinate_dofs()
             dm = np.array([self.dofmap.local_to_global_index(dof) for
                            dof in self.dofmap.cell_dofs(cell_index) ])
             mid = FEniCScpp.middle_point(f)
-            ids = np.argwhere(
-                (X[:,0]-mid.x())**2+(X[:,1]-mid.y())**2 < EPSILON
-            )
+            if self.dim == 2:
+                ids = np.argwhere(
+                    (X[:,0]-mid.x())**2+(X[:,1]-mid.y())**2 < EPSILON
+                )
+            elif self.dim == 3:
+                ids = np.argwhere(
+                    (X[:, 0]-mid.x())**2 + (X[:, 1]-mid.y())**2 (X[:, 2]-mid.z())**2 < EPSILON
+                )
             if ids.size ==0:
                 X[i,0] = mid.x()
                 orientation[i, index] = o
@@ -128,7 +133,7 @@ class InterfaceSolver(object):
         X_global = np.zeros((size*p, 2))
         orientation_global = np.zeros((size*p, 2),dtype = 'int32')
         local_facet_global = np.zeros((size*p, 2),dtype = 'int32')
-        dof_coordinates_global = np.zeros((size*p, self.dim*3, 2))
+        dof_coordinates_global = np.zeros((size*p, self.dim*(self.dim + 1), 2))
         dofmap_global = np.zeros((size*p, self.dofs_in_cell, 2), dtype = 'int32')
         
         self.comm.Allgather([X, MPI.DOUBLE],[X_global, MPI.DOUBLE])
@@ -153,15 +158,25 @@ class InterfaceSolver(object):
         X_global = X_global[indices,:]
         self.positions  = np.full((size), -1, dtype='int32')
         for i in my_indices:
-            mid_x,mid_y = X[i,:] 
-            ids = np.argwhere( (X_global[:,0]-mid_x)**2 + (X_global[:,1]-mid_y)**2  <EPSILON )
+            mid_x = X[i, :]
+            if self.dim ==3:
+                ids = np.argwhere(
+                    ((X_global[:, 0]-mid_x[0])**2 +
+                    (X_global[:, 1]-mid_x[1])**2 +
+                    (X_global[:, 2]-mid_x[2])**2)  <EPSILON
+                )
+            elif self.dim == 2:
+                ids = np.argwhere(
+                    ((X_global[:, 0]-mid_x[0])**2 +
+                    (X_global[:, 1]-mid_x[1])**2)  <EPSILON
+                ) 
             if ids.size != 0:
                 k = indices[ids[0][0]]
                 self.positions[i] = k
-                orientation[i,1] = orientation_global[k,1]
-                local_facet[i,1] = local_facet_global[k,1]
-                dof_coordinates[i,:,1] = dof_coordinates_global[k,:,1]
-                dofmap[i,:,1] = dofmap_global[k,:,1]
+                orientation[i, 1] = orientation_global[k, 1]
+                local_facet[i, 1] = local_facet_global[k, 1]
+                dof_coordinates[i, :, 1] = dof_coordinates_global[k, :, 1]
+                dofmap[i, :, 1] = dofmap_global[k, :, 1]
 
         self.my_indices = my_indices
         self.orientation_interface = orientation
@@ -173,12 +188,12 @@ class InterfaceSolver(object):
     def local_pair_interface_dofs(self, pairs, sub_space, space_key):
         dofmap = self.V.dofmap()
         r = dofmap.ownership_range()
-        coors = self.V.tabulate_dof_coordinates().reshape((-1, 2))
-        indices = [0,0]
+        coors = self.V.tabulate_dof_coordinates().reshape((-1, self.dim))
+        indices = [0, 0]
         if sub_space.num_sub_spaces() == 0:
             pairs[space_key] = {}
             for facet in self.facets:
-                cell_index = facet.entities(2)[0]
+                cell_index = facet.entities(self.dim)[0]
                 c = Cell(self.mesh,cell_index)
                 index = 1
                 if self.cell_func[c] == self.cell_val:
@@ -189,14 +204,14 @@ class InterfaceSolver(object):
                 for vertex in vertices(facet):
                     vertex_coords.append(list(vertex.point().array()))
                     vertex_indices.append(vertex.index())
-                facet_dofs = sub_dofmap.entity_dofs(self.mesh, self.mesh.topology().dim()-1, [facet.index()])
+                facet_dofs = sub_dofmap.entity_dofs(self.mesh, self.mesh.topology().dim() - 1, [facet.index()])
                 vertex_dofs = sub_dofmap.entity_dofs(self.mesh, 0, vertex_indices)
                 dofs = vertex_dofs + facet_dofs
                 for dof in dofs:
                     global_dof = dofmap.local_to_global_index(dof)
                     if dof<coors.shape[0]:
                         coor = coors[dof, :]
-                        key = str([round(c,5) for c in coor])
+                        key = str([round(c, 5) for c in coor])
                         indices[index] += 1
                         if pairs[space_key].get(key):
                             pairs[space_key][key][index] = global_dof
@@ -268,22 +283,22 @@ class InterfaceSolver(object):
             w1 = []            
             c_index = self.cells[i,0]
             if c_index != -1:
-                c = Cell(self.mesh,c_index)
-                local_facet = self.local_facet_interface[i,0]
-                dc = list(self.dof_coordinates_interface[i,:,0])
-                w0 = Assembler.w(c,local_facet,dc)
-            c_index = self.cells[i,1]
+                c = Cell(self.mesh, c_index)
+                local_facet = self.local_facet_interface[i, 0]
+                dc = list(self.dof_coordinates_interface[i, :, 0])
+                w0 = Assembler.w(c, local_facet,dc)
+            c_index = self.cells[i, 1]
             if c_index != -1:
                 c = Cell(self.mesh,c_index)
-                local_facet = self.local_facet_interface[i,1]
-                dc = list(self.dof_coordinates_interface[i,:,1])
-                w1 = Assembler.w(c,local_facet,dc)
+                local_facet = self.local_facet_interface[i, 1]
+                dc = list(self.dof_coordinates_interface[i, :, 1])
+                w1 = Assembler.w(c, local_facet,dc)
             W0.append(w0)
             W1.append(w1)
         #W0_global = [i for p in self.comm.allgather(W0) for i in p]
         W1_global = [i for p in self.comm.allgather(W1) for i in p]
         for i in self.my_indices:
-            if self.cells[i,1] == -1:
+            if self.cells[i, 1] == -1:
                 W1[i] = W1_global[self.positions[i]]
             for k in range(len(W0[i])):
                 W0[i][k] = W0[i][k] +W1[i][k]
@@ -373,7 +388,7 @@ class InterfaceSolver(object):
                     if r[0]<=pair[index]<r[1]:
                         values[node][index][s] = x.getValue(pair[index])
                     if r[0]<=pair[1-index]<r[1]:
-                        values[node][1-index][s] = x.getValue(pair[1-index])
+                        values[node][1-index][s] = x.getValue(pair[1 - index])
         for coor in values.keys():
             if values[coor] == {}:
                 del values[coor]
@@ -442,12 +457,12 @@ class InterfaceSolver(object):
 
     def assemble_interface(self, a, a1, tensor=None, finalize=True):   
         dolfin_form = _create_dolfin_form(a, None)
-        if type(self.orientation_interface) ==type(None):
+        if type(self.orientation_interface) == type(None):
             self.pair_facets()
         Assembler = assembler.SingleAssembler(dolfin_form)
         w = self.get_w(Assembler)
         form_rank = Assembler.form_rank()
-        if form_rank ==2:
+        if form_rank == 2:
             if type(tensor) ==type(None):
                 T = PETSc.Mat().create()
                 T.setSizes(tensor.shape)
@@ -460,7 +475,7 @@ class InterfaceSolver(object):
         elif form_rank ==1:
             if type(tensor) ==type(None):
                 T = PETScVector()
-                assemble(a1,tensor = T,keep_diagonal = True)
+                assemble(a1, tensor=T, keep_diagonal=True)
                 vec = PETSc.Vec().create(self.comm)
                 vec.setSizes(T.size())
                 vec.setType('mpi')
@@ -470,19 +485,19 @@ class InterfaceSolver(object):
                 vec.zeroEntries()
 
         for i in self.my_indices:
-            lf0,lf1 = self.local_facet_interface[i,:]
-            o0,o1 = self.orientation_interface[i,:]
-            dc0 = list(self.dof_coordinates_interface[i,:,0])
-            dc1 = list(self.dof_coordinates_interface[i,:,1])
+            lf0,lf1 = self.local_facet_interface[i, :]
+            o0,o1 = self.orientation_interface[i, :]
+            dc0 = list(self.dof_coordinates_interface[i, :, 0])
+            dc1 = list(self.dof_coordinates_interface[i, :, 1])
             w_ = w[i]
             values = Assembler.assemble_facet(lf0, lf1, dc0, dc1, o0, o1, w_)
             
-            cols = np.concatenate((self.dofmap_interface[i,:,0],
-                                   self.dofmap_interface[i,:,1]), axis=None)
+            cols = np.concatenate((self.dofmap_interface[i, :, 0],
+                                   self.dofmap_interface[i, :, 1]), axis=None)
             
             if form_rank == 2:
-                rows = np.concatenate((self.dofmap_interface[i,:,0],
-                                       self.dofmap_interface[i,:,1]), axis=None)
+                rows = np.concatenate((self.dofmap_interface[i, :, 0],
+                                       self.dofmap_interface[i, :, 1]), axis=None)
                 if w_ != []:
                     l = len(cols)
                     values = np.resize(values, (l, l))
@@ -490,14 +505,14 @@ class InterfaceSolver(object):
                     cols = cols[nonzero_col_ind]
                     rows = rows[nonzero_row_ind]
                     values = values[(nonzero_col_ind, nonzero_row_ind)]
-                    for c,r,v in zip(cols, rows, values): 
+                    for c ,r, v in zip(cols, rows, values): 
                         T.setValues(c, r, v, addv=PETSc.InsertMode.ADD_VALUES)
                     #T.setValues(
                     #    cols, rows, values, addv=PETSc.InsertMode.ADD_VALUES)
                 
             elif form_rank ==1:
                 vec.setValues(
-                    cols,values,addv=PETSc.InsertMode.ADD_VALUES)
+                    cols, values, addv=PETSc.InsertMode.ADD_VALUES)
         self.comm.Barrier()
         if form_rank ==1:
             T = PETScVector(vec)

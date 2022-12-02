@@ -1,16 +1,24 @@
 from mpi4py import MPI
-from dolfin import parameters, UnitSquareMesh, cells, MeshFunction, info
+from dolfin import parameters, UnitSquareMesh, cells, MeshFunction, info, UnitCubeMesh
 from InterfaceSolver import make_discontinuous_mesh
 
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
+dim = 3
+resolution = 20
 
 if size == 1:
     parameters["ghost_mode"] = "none"  
-    mesh = UnitSquareMesh(20, 20,"crossed")
+    if dim == 2:
+        mesh = UnitSquareMesh(20, 20,"crossed")
+    elif dim == 3:
+        mesh = UnitCubeMesh(20, 20, 20)
     directory = 'mesh/'
-    name = 'mesh'
+    if dim == 2:
+        name = 'mesh'
+    else:
+        name = f'mesh3d'
     cell_function_file = directory + 'cell_function.xml'
     mesh_path = directory + name + '.xml'
     marker = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)

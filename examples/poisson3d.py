@@ -13,7 +13,7 @@ size = comm.Get_size()
 
 parameters["ghost_mode"] = "none"
 # load the discontinuous mesh. Make sure you build that -> python make_mesh.py
-mesh = Mesh("mesh/mesh.xml")
+mesh = Mesh("mesh/mesh3d.xml")
 
 # label the top and the bottom subdomains
 marker = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
@@ -32,17 +32,17 @@ v = TestFunction(V)
 u = Function(V)
 
 # Boundary
-top =  CompiledSubDomain("near(x[1], top) && on_boundary", top = 1.0)
-bottom = CompiledSubDomain("near(x[1], bottom) && on_boundary", bottom = 0.0)
-middle = CompiledSubDomain("near(x[1], middle) ", middle = 0.5)
+top =  CompiledSubDomain("near(x[1], top) && on_boundary", top=1.0)
+bottom = CompiledSubDomain("near(x[1], bottom) && on_boundary", bottom=0.0)
+middle = CompiledSubDomain("near(x[1], middle) ", middle=0.5)
 
 bcb = DirichletBC(V, Constant(0.0), bottom)
 bct = DirichletBC(V, Constant((1.0)), top)
 bcm = DirichletBC(V, Constant((0.0)), middle)
 
 
-def interface_func(x, y):
-    return y-0.5
+def interface_func(x, y, z):
+    return y - 0.5
 
 interface = interface(mesh, interface_func, val=1)
 dX = Measure("dx")(domain=mesh, subdomain_data=marker)
@@ -52,9 +52,9 @@ def gamma(u, p, epsilon=1.0e-7):
     value = (epsilon**2 + inner(grad(u), grad(u)) )**((p - 2 ) / 2 )
     return value
 
-p0 = 1.8
-p1 = 2.1
-n = Constant((0., 1.)) # normal vector
+p0 = 2.0
+p1 = 2.0
+n = Constant((0., 1., 0.)) # normal vector
 
 Tn = gamma(u(top_sign), p1)*inner(grad(u(top_sign)) ,n)
 a_interface = (
@@ -80,17 +80,10 @@ solver = NonlinearInterfaceSolver(
 
 solver.solve(a0, a1, a_interface,
              bcs0=[bct], bcs1=[bcb], bcs_zero0=[], bcs_zero1=[bcm])
-
 # save and plot
-directory = 'results/nonlinear_parabolic'
+directory = 'results/poisson3d'
 with XDMFFile(comm,f"{directory}/u.xdmf" ) as xdmf:
     xdmf.parameters["flush_output"] = True
-    xdmf.parameters["functions_share_mesh"] = True
-    f = xdmf
-    
-u.rename('u','u')
-f.write(u)
-
-#import matplotlib.pyplot as plt
-#plot(u)
-#plt.show()
+    xdmf.parameters["functions_share_mesh"] = True 
+    u.rename('u','u')
+    xdmf.write(u)
