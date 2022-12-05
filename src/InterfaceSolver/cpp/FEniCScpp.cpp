@@ -23,10 +23,10 @@ std::shared_ptr<const dolfin::Mesh> get_mesh(const dolfin::FunctionSpace& V)
   return  V.mesh();
 }
 
-std::size_t local_facet(dolfin::Facet *f,dolfin::Cell c){
+std::size_t local_facet(dolfin::MeshEntity *f, dolfin::Cell c){
 return  c.index(*f);
 }
-ufc::cell ufc_cell(dolfin::Cell c,std::size_t local_facet){
+ufc::cell ufc_cell(dolfin::Cell c, std::size_t local_facet){
     ufc::cell uc;
     c.get_cell_data(uc, local_facet);
 return uc;
@@ -87,7 +87,7 @@ std::vector<std::vector<int>> dofmap(const dolfin::Form &a,
   return macro_dofs;
 }
 
-dolfin::Point middle_point(const dolfin::Facet f){
+dolfin::Point middle_point(const dolfin::MeshEntity f){
   // Get global index of vertices on the facet
   const std::size_t v1 = f.entities(0)[0];
   const std::size_t v2 = f.entities(0)[1];

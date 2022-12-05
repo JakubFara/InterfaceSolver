@@ -68,8 +68,9 @@ class InterfaceSolver(object):
 
         """
         facets_list = []
+        print(self.dim)
         for f in entities(self.mesh, self.dim - 1):
-            if len(f.entities(2)) != 1 or self.interface_func[f] != self.interface_value:
+            if len(f.entities(self.dim)) != 1 or self.interface_func[f] != self.interface_value:
                 continue
             facets_list.append(f)
 
@@ -78,7 +79,7 @@ class InterfaceSolver(object):
         
         size = self.comm.allreduce(sendobj=size_local, op=MPI.MAX)
         
-        X = np.zeros((size,  self.dim))
+        X = np.zeros((size, self.dim))
         X.fill(np.nan)
         orientation = np.zeros((size, 2), dtype='int32')
         local_facet = np.zeros((size, 2), dtype='int32')
@@ -99,22 +100,25 @@ class InterfaceSolver(object):
             dc = c.get_coordinate_dofs()
             dm = np.array([self.dofmap.local_to_global_index(dof) for
                            dof in self.dofmap.cell_dofs(cell_index) ])
-            mid = FEniCScpp.middle_point(f)
+            mid = f.midpoint()
             if self.dim == 2:
                 ids = np.argwhere(
-                    (X[:,0]-mid.x())**2+(X[:,1]-mid.y())**2 < EPSILON
+                    (X[:,0] - mid.x())**2+(X[:,1]-mid.y())**2 < EPSILON
                 )
             elif self.dim == 3:
                 ids = np.argwhere(
-                    (X[:, 0]-mid.x())**2 + (X[:, 1]-mid.y())**2 (X[:, 2]-mid.z())**2 < EPSILON
+                    (X[:, 0]-mid.x())**2 + (X[:, 1]-mid.y())**2 + (X[:, 2]-mid.z())**2 < EPSILON
                 )
             if ids.size ==0:
-                X[i,0] = mid.x()
+                X[i, 0] = mid.x()
+                X[i, 1] = mid.y()
+                if self.dim == 3:
+                    X[i, 2] = mid.z()
                 orientation[i, index] = o
                 local_facet[i, index] = lf
-                dof_coordinates[i,:,index] = dc
+                dof_coordinates[i, :, index] = dc
                 dofmap[i, :, index] = dm
-                X[i,1] = mid.y()
+                
                 cells[i, index] = cell_index
                 if index ==0:
                     my_indices.append(i) # assemble only facets where I own cell with index 0
@@ -130,7 +134,7 @@ class InterfaceSolver(object):
                     my_indices.append(pos) # assemble only facets where I own cell with index 0
                     
         p = self.comm_size
-        X_global = np.zeros((size*p, 2))
+        X_global = np.zeros((size*p, self.dim))
         orientation_global = np.zeros((size*p, 2),dtype = 'int32')
         local_facet_global = np.zeros((size*p, 2),dtype = 'int32')
         dof_coordinates_global = np.zeros((size*p, self.dim*(self.dim + 1), 2))
@@ -483,7 +487,7 @@ class InterfaceSolver(object):
             else:
                 vec = tensor
                 vec.zeroEntries()
-
+        
         for i in self.my_indices:
             lf0,lf1 = self.local_facet_interface[i, :]
             o0,o1 = self.orientation_interface[i, :]
