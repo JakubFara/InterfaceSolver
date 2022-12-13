@@ -68,7 +68,6 @@ class InterfaceSolver(object):
 
         """
         facets_list = []
-        print(self.dim)
         for f in entities(self.mesh, self.dim - 1):
             if len(f.entities(self.dim)) != 1 or self.interface_func[f] != self.interface_value:
                 continue
