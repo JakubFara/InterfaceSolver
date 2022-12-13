@@ -94,6 +94,118 @@ def make_discontinuous_mesh(
     return new_mesh
 
 
+def boundary_edge(edge: df.MeshEntity, dim: int, interface: df.MeshFunction,
+                  val: int):
+    """
+    """
+    num_edges = 0
+    for e in df.entities(edge, dim -1):
+        if interface[e] == val:
+            num_edges += 1
+    if num_edges == 1:
+        return True
+    return False
+
+
+def color_neighbour(cell: df.MeshEntity, interface: df.MeshFunction,
+                    interface_cells: df.MeshFunction,
+                    boundary_entities: df.MeshFunction, val: int, dim: int):
+    """
+    """
+    interface_cells[cell] = 2
+    for edge in df.entities(cell, dim - 1):
+        boundary = False
+        for v in df.entities(edge, dim - 2):
+            if boundary_entities[v] == 1:
+                boundary = True
+        if interface[edge] == val or boundary:
+            continue
+        for c in df.entities(edge, dim):
+            if interface_cells[c] == 1:
+                color_neighbour(
+                    c, interface, interface_cells, boundary_entities, val, dim
+                )
+
+
+def interface_vertex(v, interface, val: int, dim: int):
+    for e in df.entities(v, dim - 1):
+        if interface[e] == val:
+            return True
+    return False
+
+
+def make_broken_mesh(mesh: df.Mesh, interface: df.MeshFunction, val: int,
+                     directory='./', name='broken_mesh'):
+    """
+    """
+    dim = mesh.topology().dim()
+    boundary_entities = df.MeshFunction('size_t', mesh, dim - 2, 0)
+    interface_cells = df.MeshFunction('size_t', mesh, dim, 0)
+    # mark entities on the boundary of the interface
+    for edge in df.entities(mesh, dim - 1):
+        if interface[edge] != val:
+            continue
+        for e in df.entities(edge, dim - 2):
+            if boundary_edge(e, dim, interface, val):
+                boundary_entities[e] = 1
+
+    # mark cells near interface
+    for edge in df.entities(mesh, dim - 1):
+        if interface[edge] != val:
+            continue
+        for e in df.entities(edge, dim - 2):
+            if boundary_entities[e] != 1:
+                for c in df.entities(e, dim):
+                    interface_cells[c] = 1
+
+    # find initial cell
+    initial_cell = None
+    for edge in df.entities(mesh, dim - 1):
+        if interface[edge] == val:
+            for c in df.entities(edge, dim):
+                initial_cell = c
+                break
+            break
+    
+    color_neighbour(
+        initial_cell, interface, interface_cells, boundary_entities, val, dim
+    )
+    subdomain_file = df.File("subdomains.pvd")
+    subdomain_file << (interface_cells)
+    coords = mesh.coordinates()[:]
+    cls = mesh.cells()[:]
+    new_index_last = (cls[:, 0]).size
+    changed_indices = {}
+    for c in  df.entities(mesh, dim):
+        if interface_cells[c] == 2:
+            cell_index = c.global_index()
+            for v in df.entities(c, dim - 2):
+                if boundary_entities[v] != 1 and interface_vertex(v, interface, val, dim):
+                    index = v.global_index()
+                    if not changed_indices.get(index):
+                        changed_indices[index] = new_index_last
+                        new_index = new_index_last
+                    else:
+                        new_index = changed_indices[index]
+                    j = np.where(cls[cell_index, :] == index)[0]
+                    if j.size == 1:
+                        j = j[0]
+                    else:
+                        print('ERRORRRR')
+                    cls[cell_index, j] = new_index
+                    new_index_last += 1
+
+    coords_new = np.zeros((new_index_last, dim))
+    coords_new[: coords.shape[0], : coords.shape[1]] = coords
+    for i, new_i in changed_indices.items():
+        coords_new[new_i, :] = coords[i, :]
+
+    mesh = dolfin_mesh(coords_new, cls)
+
+    mesh_file = df.File(directory + name + '.xml')
+    mesh_file << mesh
+
+
 def interface(mesh, func, val=1, eps=0.0001):
     """
     Labeling of facets for which `func` < `eps`.
@@ -113,7 +225,7 @@ def interface(mesh, func, val=1, eps=0.0001):
         mid = f.midpoint()
         if dim == 2:
             func_val = func(mid.x(), mid.y())
-        elif dim == 3:  
+        elif dim == 3:
             func_val = func(mid.x(), mid.y(), mid.z())
         if abs(func_val) < eps:
             interface[f] = val
