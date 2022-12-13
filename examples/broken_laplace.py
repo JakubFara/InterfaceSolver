@@ -22,7 +22,7 @@ solve(a==0, v, bcs = bcs)
 
 # save and plot
 v.rename('u','u')
-directory = 'results/linear_parabolic'
+directory = 'results/broken_laplace'
 with XDMFFile(comm, f"{directory}/u.xdmf" ) as xdmf:
     xdmf.parameters["flush_output"] = True
     xdmf.parameters["functions_share_mesh"] = True
