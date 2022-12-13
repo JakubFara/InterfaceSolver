@@ -56,9 +56,9 @@ p0 = 2.0
 p1 = 2.0
 n = Constant((0., 1., 0.)) # normal vector
 
-Tn = gamma(u(top_sign), p1)*inner(grad(u(top_sign)) ,n)
+Tn = gamma(u(top_sign), p1)*inner(grad(u(top_sign)), n)
 a_interface = (
-    inner(( u(bottom_sign) - 1*u(top_sign)),v(top_sign))*dS
+    inner(( u(bottom_sign) - 1*u(top_sign)), v(top_sign))*dS
     - 1.0*inner(Tn,v(bottom_sign))*dS
 )
 
