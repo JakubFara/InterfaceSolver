@@ -11,6 +11,9 @@ a disconinuity in the middle of the domain.
 .. image:: broken_problem.png
     :scale: 75 %
 
+Implementation
+###################
+
 First we need to generate mesh which will be discontinuous along the discontinuity.
 For that purous there is function `make_broken_mesh` and we can create the mesh
 easily as it is implemented in `make_btoken_mesh.py`.
