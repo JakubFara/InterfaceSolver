@@ -43,8 +43,8 @@ the example. Ten we create list of Dirichlet interface conditions as follows.
         (( ), Discontinuity(), bottom_sign)
     ]
 
-The empty list denotes subspace of FunctionSpace. We deal only with scalar 
-space, so label is empty list if we would have MixedFunctionSpace we would
+The empty list denotes FunctionSpace inself. We deal only with scalar 
+space, so the label is an empty list if we would have MixedFunctionSpace we will
 denote (i, ) i-th subspace if it is scalar and (i, j) if i-th space is vectorial.
 Then we formulate the UFL as we are used to and solve the equation. (Because
 we deal with Dirichlet boundary conditions we need to include the interface
