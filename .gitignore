@@ -57,6 +57,7 @@ Thumbs.db
 *.msh
 *.txt
 *.json
+*.pvtu
 #Redundant files
 *~
 build/
