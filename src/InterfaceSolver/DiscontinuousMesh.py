@@ -141,13 +141,22 @@ def make_broken_mesh(mesh: df.Mesh, interface: df.MeshFunction, val: int,
     dim = mesh.topology().dim()
     boundary_entities = df.MeshFunction('size_t', mesh, dim - 2, 0)
     interface_cells = df.MeshFunction('size_t', mesh, dim, 0)
+    interface_keys = []
+    boundary_keys = []
     # mark entities on the boundary of the interface
     for edge in df.entities(mesh, dim - 1):
         if interface[edge] != val:
             continue
+        interface_keys.append(
+            str([round(c, 5) for c in edge.midpoint().array()])
+        )
+        #print([round(c, 5) for c in edge.midpoint().array()])
         for e in df.entities(edge, dim - 2):
             if boundary_edge(e, dim, interface, val):
                 boundary_entities[e] = 1
+                boundary_keys.append(
+                    str([round(c, 5) for c in e.midpoint().array()])
+                )
 
     # mark cells near interface
     for edge in df.entities(mesh, dim - 1):
@@ -174,7 +183,7 @@ def make_broken_mesh(mesh: df.Mesh, interface: df.MeshFunction, val: int,
     subdomain_file << (interface_cells)
     coords = mesh.coordinates()[:]
     cls = mesh.cells()[:]
-    new_index_last = (cls[:, 0]).size
+    new_index_last = (coords[:, 0]).size
     changed_indices = {}
     for c in  df.entities(mesh, dim):
         if interface_cells[c] == 2:
@@ -185,6 +194,7 @@ def make_broken_mesh(mesh: df.Mesh, interface: df.MeshFunction, val: int,
                     if not changed_indices.get(index):
                         changed_indices[index] = new_index_last
                         new_index = new_index_last
+                        new_index_last += 1
                     else:
                         new_index = changed_indices[index]
                     j = np.where(cls[cell_index, :] == index)[0]
@@ -193,18 +203,34 @@ def make_broken_mesh(mesh: df.Mesh, interface: df.MeshFunction, val: int,
                     else:
                         print('ERRORRRR')
                     cls[cell_index, j] = new_index
-                    new_index_last += 1
+                    
 
     coords_new = np.zeros((new_index_last, dim))
     coords_new[: coords.shape[0], : coords.shape[1]] = coords
     for i, new_i in changed_indices.items():
         coords_new[new_i, :] = coords[i, :]
 
-    mesh = dolfin_mesh(coords_new, cls)
+    new_mesh = dolfin_mesh(coords_new, cls)
 
-    mesh_file = df.File(directory + name + '.xml')
-    mesh_file << mesh
-
+    interface_entities = df.MeshFunction('bool', new_mesh, dim - 1, False)
+    boundary_entities = df.MeshFunction('bool', new_mesh, dim - 2, False)
+    
+    interface_keys = set(interface_keys)
+    boundary_keys = set(boundary_keys)
+    for entity in df.entities(new_mesh, dim - 1):
+        if entity.num_entities(dim) == 1 or True:
+            key = str([round(c, 5) for c in entity.midpoint().array()])
+            if key in interface_keys:
+                interface_entities[entity] = True
+                for e in df.entities(entity, dim - 2):
+                    key = str([round(c, 5) for c in e.midpoint().array()])
+                    if key in boundary_keys:
+                        boundary_entities[e] = True
+    hdf = df.HDF5File(mesh.mpi_comm(), f"{directory + name}.h5", "w")
+    hdf.write(interface_entities, "/interface")
+    hdf.write(boundary_entities, "/boundary")
+    hdf.write(new_mesh, "/mesh")
+    hdf.close()
 
 def interface(mesh, func, val=1, eps=0.0001):
     """

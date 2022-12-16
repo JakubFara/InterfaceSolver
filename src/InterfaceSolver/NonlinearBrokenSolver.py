@@ -6,26 +6,24 @@ from dolfin import (
     as_backend_type, info, DirichletBC
 )
 from mpi4py import MPI
-from InterfaceSolver.InterfaceSolver import InterfaceSolver
+from InterfaceSolver.BrokenSolver import BrokenSolver
 from InterfaceSolver.options import opts_setup, DEFAULT_OPTIONS
 
 
-class NonlinearInterfaceSolver(InterfaceSolver):
+class NonlinearBrokenSolver(BrokenSolver):
 
     def __init__(self, u, cell_func,
-                 interface_func, comm = None,
+                 interface_func, interface_boundary_func, comm = None,
                  interface_value=1, cell_val=0, params=None, monitor=True):
         """
         This is init
         """
-        self.a0 = None
-        self.a1 = None
-        self.da0 = None
-        self.da1 = None
+        self.a = None
+        self.da = None
         self.params = params
         self.monitor = monitor
-        super().__init__(u,cell_func,
-                         interface_func, comm=comm,
+        super().__init__(u, cell_func,
+                         interface_func, interface_boundary_func, comm=comm,
                          interface_value=interface_value, cell_val=cell_val)
 
         self.x = as_backend_type(self.u.vector())
@@ -40,21 +38,16 @@ class NonlinearInterfaceSolver(InterfaceSolver):
     
     def F(self, snes, x, F):
         self.update_x(x)  
-        F0 = PETScVector()
-        F1 = PETScVector()
-        assemble(self.a0, tensor=F0)
-        assemble(self.a1, tensor=F1)
+        F_dolf = PETScVector()
+        assemble(self.a, tensor=F_dolf)
 
-        for bc in self.bcs_zero0:
-            bc.apply(F0)
-
-        for bc in self.bcs_zero1:
-            bc.apply(F1)
+        for space, sign in self.bcs_zero:
+            self.zero_interface_vector(F_dolf.vec(), space, sign)
 
         x.assemble()
         F.zeroEntries()
         self.assemble_interface(
-            self.a_interface, self.a1+self.a0, tensor=F, finalize=True)
+            self.a_interface, self.a, tensor=F)
 
         for space, func, sign in self.dirichlet_interface:
             self.assemble_dirichlet_interface_vector(
@@ -64,33 +57,24 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         F_  = PETScVector(F)
         F_.update_ghost_values()
         F_.apply('add')
-        F_.axpy(1, F1)
-        F_.axpy(1, F0)
+        F_.axpy(1, F_dolf)
 
-        for bc in self.bcs0:
+        for bc in self.bcs:
             bc.apply(F_, self.x)
-            
-        for bc in self.bcs1:
-            bc.apply(F_,self.x)
             
         F_.apply('add')
         F_.update_ghost_values()
                           
     def J(self, snes, x, J, P):
         self.update_x(x)
-        A0 = PETScMatrix()
-        A1 = PETScMatrix()
-        assemble(self.da0 , tensor = A0, keep_diagonal=True)
-        assemble(self.da1 , tensor = A1, keep_diagonal=True)
+        A_dolf = PETScMatrix()
+        assemble(self.da , tensor=A_dolf, keep_diagonal=True)
         
-        for bc in self.bcs_zero0:
-            bc.zero(A0)
-            
-        for bc in self.bcs_zero1:
-            bc.zero(A1)
+        for space, sign in self.bcs_zero:
+            self.zero_interface_tensor(A_dolf.mat(), space, sign)
 
         self.assemble_interface(
-            self.da_interface, self.da1, tensor=J, finalize=True)
+            self.da_interface, self.da, tensor=J)
 
         for space, func, sign in self.dirichlet_interface:
             self.assemble_dirichlet_interface_tensor(
@@ -99,43 +83,31 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         J.assemble()
         J_ = PETScMatrix(J)
         
-        J_.axpy(1, A0, False)
-        J_.axpy(1, A1, False)
+        J_.axpy(1, A_dolf, False)
 
-        for bc in self.bcs0:
-            bc.apply(J_)
-            
-        for bc in self.bcs1:
+        for bc in self.bcs:
             bc.apply(J_)
         
         J.assemble()
         return True
 
-    def solve(self, a0, a1, a_interface,
-            bcs0=None, bcs1=None, bcs_zero0 = None, bcs_zero1=None,
+    def solve(self, a, a_interface,
+            bcs=None, bcs_zero = None,
             force_equality=None, dirichlet_interface=None,
             *args, **kwargs):
 
-        self.a0 = a0
-        self.a1 = a1
+        self.a = a
         
         self.a_interface = a_interface
 
-        self.da0 = derivative(a0, self.u)
-        self.da1 = derivative(a1, self.u)
+        self.da = derivative(a, self.u)
         self.da_interface = derivative(a_interface, self.u)
 
-        self.bcs0 = bcs0
-        self.bcs1 = bcs1
-        if bcs_zero0 == None:
-            self.bcs_zero0 = []
+        self.bcs = bcs
+        if bcs_zero == None:
+            self.bcs_zero = []
         else:
-            self.bcs_zero0 = [*bcs_zero0]
-            
-        if bcs_zero1 == None:
-            self.bcs_zero1 = []
-        else:
-            self.bcs_zero1 = [*bcs_zero1]
+            self.bcs_zero = [*bcs_zero]
 
         if force_equality == None:
             self.force_equality = ()
@@ -146,33 +118,23 @@ class NonlinearInterfaceSolver(InterfaceSolver):
             self.dirichlet_interface = []
         else:
             self.dirichlet_interface = dirichlet_interface
-        
-        # for space, _, sign in self.dirichlet_interface:
-        #     V = self.V
-        #     for i in space:
-        #         V = V.sub(i)
-        #     if sign == '+':
-        #         self.bcs_zero1.append(
-        #             DirichletBC(
-        #                 V, 0.0, self.interface_func, self.interface_value)
-        #             )
-        #     else:
-        #         self.bcs_zero0.append(
-        #             DirichletBC(
-        #                 V, 0.0, self.interface_func, self.interface_value)
-        #             )
-        
+            self.bcs_zero += [(space, sign) for space, _, sign in dirichlet_interface] 
+
         self.form_compiler_parameters = {"optimize": True}
         if "form_compiler_parameters" in kwargs:
             self.form_compiler_parameters = kwargs["form_compiler_parameters"]
-        self.assembler = SystemAssembler(self.da0 + self.da1, self.a0 + self.a1,
-                                         self.bcs0, form_compiler_parameters=
+        self.assembler = SystemAssembler(self.da, self.a,
+                                         bcs, form_compiler_parameters=
                                          self.form_compiler_parameters)
         self.comm.Barrier()
 
         self.A_dolfin = PETScMatrix()
-        self.assembler.init_global_tensor(self.A_dolfin, Form(self.da0 + self.da1))
+        
+        #self.assembler.init_global_tensor(self.A_dolfin, Form(self.da))
+        assemble(self.da , tensor=self.A_dolfin, keep_diagonal=True)
         self.A_petsc = self.A_dolfin.mat()
+        for bc in self.bcs:
+            bc.apply(self.A_dolfin)
 
         self.xx=self.A_petsc.createVecRight()
         self.xx.axpy(1.0, self.x_petsc)
@@ -182,7 +144,7 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         self.snes.setFromOptions()
         self.snes.setUp()
         self.snes.setSolution(self.xx)
-        self.snes.solve(None,self.xx)
+        self.snes.solve(None, self.xx)
 
         for subspace, sign in  self.force_equality:
             self.assign_interface(self.x.vec(), self.x.vec(), subspace, sign)
@@ -195,8 +157,8 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         self.snes.setFunction(self.F, self.b_petsc)
         self.snes.setJacobian(self.J, self.A_petsc)
         self.snes.setSolution(self.xx)
-        self.snes.computeFunction( self.xx,  self.b_petsc)
-        self.snes.computeJacobian( self.xx, self.A_petsc)
+        self.snes.computeFunction(self.xx,  self.b_petsc)
+        self.snes.computeJacobian(self.xx, self.A_petsc)
 
         if monitor==True:
             self.snes.setMonitor(SNESMonitor())

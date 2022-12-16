@@ -6,3 +6,4 @@ from InterfaceSolver.LinearInterfaceSolver import LinearInterfaceSolver
 from InterfaceSolver.NonlinearInterfaceSolver import (
     NonlinearInterfaceSolver, SNESMonitor, KSPMonitor
 )
+from InterfaceSolver.NonlinearBrokenSolver import NonlinearBrokenSolver

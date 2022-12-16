@@ -1,5 +1,5 @@
 from dolfin import vertices
-from InterfaceSolver.FEniCScpp import FEniCScpp,assembler
+from InterfaceSolver.FEniCScpp import FEniCScpp, assembler
 from mpi4py import MPI
 import petsc4py
 petsc4py.init()
@@ -207,7 +207,9 @@ class InterfaceSolver(object):
                 for vertex in vertices(facet):
                     vertex_coords.append(list(vertex.point().array()))
                     vertex_indices.append(vertex.index())
-                facet_dofs = sub_dofmap.entity_dofs(self.mesh, self.mesh.topology().dim() - 1, [facet.index()])
+                facet_dofs = sub_dofmap.entity_dofs(
+                    self.mesh, self.mesh.topology().dim() - 1, [facet.index()]
+                )
                 vertex_dofs = sub_dofmap.entity_dofs(self.mesh, 0, vertex_indices)
                 dofs = vertex_dofs + facet_dofs
                 for dof in dofs:
@@ -224,7 +226,6 @@ class InterfaceSolver(object):
         else:
             for i in range(sub_space.num_sub_spaces()):
                 self.local_pair_interface_dofs(pairs, sub_space.sub(i), space_key+ (i, ))
-        
 
     def get_pairs(self):
         pairs = {}
@@ -245,7 +246,6 @@ class InterfaceSolver(object):
                     if not found:
                         info('NOT FOUND PAIR !!!!!!!!!!!!!!!')
                         print(space_key, key, missing_index)
-
         return pairs
 
     def assign_interface(self, x1, x2, subspace, sign):
@@ -307,10 +307,8 @@ class InterfaceSolver(object):
                 W0[i][k] = W0[i][k] +W1[i][k]
         return W0
 
-
-    def assemble_dirichlet_interface_tensor(
-            self, tensor, x, space, func, sign:str
-        ):
+    def assemble_dirichlet_interface_tensor(self, tensor, x, space, func,
+                                            sign: str):
         T = tensor
         if sign == '+':
             index = 0
@@ -360,9 +358,7 @@ class InterfaceSolver(object):
                 
                 T.setValues(
                     [self.pairs[space][node][index]],
-                    dofs,
-                    vals,
-                    addv=PETSc.InsertMode.ADD_VALUES
+                    dofs, vals, addv=PETSc.InsertMode.ADD_VALUES
                 )
         #T.setOption(PETSc_MAT_NEW_NONZERO_ALLOCATION_ERR, PETSc_TRUE)
         T.setUp()
@@ -488,8 +484,8 @@ class InterfaceSolver(object):
                 vec.zeroEntries()
         
         for i in self.my_indices:
-            lf0,lf1 = self.local_facet_interface[i, :]
-            o0,o1 = self.orientation_interface[i, :]
+            lf0, lf1 = self.local_facet_interface[i, :]
+            o0, o1 = self.orientation_interface[i, :]
             dc0 = list(self.dof_coordinates_interface[i, :, 0])
             dc1 = list(self.dof_coordinates_interface[i, :, 1])
             w_ = w[i]
