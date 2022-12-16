@@ -70,7 +70,7 @@
 
 
 <div class="viewcode-block" id="connect_subdomains"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.DiscontinuousMesh.connect_subdomains">[docs]</a><span class="k">def</span> <span class="nf">connect_subdomains</span><span class="p">(</span>
-    <span class="n">submesh1</span><span class="p">,</span> <span class="n">submesh2</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;mesh&#39;</span><span class="p">):</span>
+    <span class="n">submesh1</span><span class="p">,</span> <span class="n">submesh2</span><span class="p">,</span> <span class="n">save</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">directory</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;mesh&#39;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This function connect 2 submeshes with common part of boundary into &#39;mesh&#39;.</span>
 
@@ -95,8 +95,8 @@
     <span class="bp">cls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">cls1</span><span class="p">,</span> <span class="n">cls2</span><span class="p">))</span>
     <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">coords1</span><span class="p">,</span> <span class="n">coords2</span><span class="p">))</span>
     
-    <span class="n">mesh</span> <span class="o">=</span> <span class="n">dolfin_mesh</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span><span class="bp">cls</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">save</span> <span class="o">==</span><span class="kc">True</span><span class="p">:</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">dolfin_mesh</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">save</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
         <span class="n">mesh_path</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;.xml&#39;</span>
         <span class="n">mesh_file</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span>
         <span class="n">mesh_file</span> <span class="o">&lt;&lt;</span> <span class="n">mesh</span>
@@ -113,16 +113,21 @@
 <span class="sd">        cls</span>
 <span class="sd">            `list`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="n">n_coords</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
     <span class="n">n_cls</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">cell_type</span> <span class="o">=</span> <span class="s1">&#39;triangle&#39;</span>
+    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">cell_type</span> <span class="o">=</span> <span class="s1">&#39;tetrahedron&#39;</span>
     
     <span class="n">editor</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshEditor</span><span class="p">()</span>
     <span class="n">mesh</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Mesh</span><span class="p">()</span>
-    <span class="n">editor</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span><span class="s1">&#39;triangle&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># top. and geom. dimension are both 2</span>
-    <span class="n">editor</span><span class="o">.</span><span class="n">init_vertices</span><span class="p">(</span><span class="n">n_coords</span> <span class="p">)</span>  <span class="c1"># number of vertices</span>
-    <span class="n">editor</span><span class="o">.</span><span class="n">init_cells</span><span class="p">(</span><span class="n">n_cls</span><span class="p">)</span>     <span class="c1"># number of cells</span>
+    <span class="n">editor</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">cell_type</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>  <span class="c1"># top. and geom. dimension are both dim</span>
+    <span class="n">editor</span><span class="o">.</span><span class="n">init_vertices</span><span class="p">(</span><span class="n">n_coords</span><span class="p">)</span>  <span class="c1"># number of vertices</span>
+    <span class="n">editor</span><span class="o">.</span><span class="n">init_cells</span><span class="p">(</span><span class="n">n_cls</span><span class="p">)</span>  <span class="c1"># number of cells</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_coords</span><span class="p">):</span>
-        <span class="n">editor</span><span class="o">.</span><span class="n">add_vertex</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">][:</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">editor</span><span class="o">.</span><span class="n">add_vertex</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">][:</span> <span class="n">dim</span><span class="p">])</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_cls</span><span class="p">):</span>
         <span class="n">editor</span><span class="o">.</span><span class="n">add_cell</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">cls</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
     <span class="n">editor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -148,14 +153,151 @@
 <span class="sd">            optional argument `str`</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">submesh0</span> <span class="o">=</span>  <span class="n">df</span><span class="o">.</span><span class="n">SubMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">val0</span><span class="p">)</span>
-    <span class="n">submesh1</span> <span class="o">=</span>  <span class="n">df</span><span class="o">.</span><span class="n">SubMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">val1</span><span class="p">)</span>
+    <span class="n">submesh0</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">SubMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">val0</span><span class="p">)</span>
+    <span class="n">submesh1</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">SubMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">val1</span><span class="p">)</span>
     <span class="n">new_mesh</span> <span class="o">=</span> <span class="n">connect_subdomains</span><span class="p">(</span>
-        <span class="n">submesh0</span><span class="p">,</span><span class="n">submesh1</span><span class="p">,</span><span class="n">save</span> <span class="o">=</span> <span class="n">save</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span>
+        <span class="n">submesh0</span><span class="p">,</span> <span class="n">submesh1</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="n">save</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">new_mesh</span></div>
 
+
+<div class="viewcode-block" id="boundary_edge"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.DiscontinuousMesh.boundary_edge">[docs]</a><span class="k">def</span> <span class="nf">boundary_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshEntity</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">interface</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">,</span>
+                  <span class="n">val</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_edges</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">interface</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">==</span> <span class="n">val</span><span class="p">:</span>
+            <span class="n">num_edges</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">num_edges</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="color_neighbour"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.DiscontinuousMesh.color_neighbour">[docs]</a><span class="k">def</span> <span class="nf">color_neighbour</span><span class="p">(</span><span class="n">cell</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshEntity</span><span class="p">,</span> <span class="n">interface</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">,</span>
+                    <span class="n">interface_cells</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">,</span>
+                    <span class="n">boundary_entities</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">interface_cells</span><span class="p">[</span><span class="n">cell</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">boundary</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">boundary_entities</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">boundary</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">interface</span><span class="p">[</span><span class="n">edge</span><span class="p">]</span> <span class="o">==</span> <span class="n">val</span> <span class="ow">or</span> <span class="n">boundary</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">interface_cells</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">color_neighbour</span><span class="p">(</span>
+                    <span class="n">c</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">interface_cells</span><span class="p">,</span> <span class="n">boundary_entities</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">dim</span>
+                <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="interface_vertex"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.DiscontinuousMesh.interface_vertex">[docs]</a><span class="k">def</span> <span class="nf">interface_vertex</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">interface</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">==</span> <span class="n">val</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="make_broken_mesh"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.DiscontinuousMesh.make_broken_mesh">[docs]</a><span class="k">def</span> <span class="nf">make_broken_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">interface</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                     <span class="n">directory</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;broken_mesh&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">topology</span><span class="p">()</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span>
+    <span class="n">boundary_entities</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span><span class="s1">&#39;size_t&#39;</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">interface_cells</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span><span class="s1">&#39;size_t&#39;</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">interface_keys</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">boundary_keys</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># mark entities on the boundary of the interface</span>
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">interface</span><span class="p">[</span><span class="n">edge</span><span class="p">]</span> <span class="o">!=</span> <span class="n">val</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">interface_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">([</span><span class="nb">round</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">edge</span><span class="o">.</span><span class="n">midpoint</span><span class="p">()</span><span class="o">.</span><span class="n">array</span><span class="p">()])</span>
+        <span class="p">)</span>
+        <span class="c1">#print([round(c, 5) for c in edge.midpoint().array()])</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">boundary_edge</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+                <span class="n">boundary_entities</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">boundary_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">([</span><span class="nb">round</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">e</span><span class="o">.</span><span class="n">midpoint</span><span class="p">()</span><span class="o">.</span><span class="n">array</span><span class="p">()])</span>
+                <span class="p">)</span>
+
+    <span class="c1"># mark cells near interface</span>
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">interface</span><span class="p">[</span><span class="n">edge</span><span class="p">]</span> <span class="o">!=</span> <span class="n">val</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">boundary_entities</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+                    <span class="n">interface_cells</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># find initial cell</span>
+    <span class="n">initial_cell</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">interface</span><span class="p">[</span><span class="n">edge</span><span class="p">]</span> <span class="o">==</span> <span class="n">val</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+                <span class="n">initial_cell</span> <span class="o">=</span> <span class="n">c</span>
+                <span class="k">break</span>
+            <span class="k">break</span>
     
+    <span class="n">color_neighbour</span><span class="p">(</span>
+        <span class="n">initial_cell</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">interface_cells</span><span class="p">,</span> <span class="n">boundary_entities</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">dim</span>
+    <span class="p">)</span>
+    <span class="n">subdomain_file</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s2">&quot;subdomains.pvd&quot;</span><span class="p">)</span>
+    <span class="n">subdomain_file</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">interface_cells</span><span class="p">)</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">coordinates</span><span class="p">()[:]</span>
+    <span class="bp">cls</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()[:]</span>
+    <span class="n">new_index_last</span> <span class="o">=</span> <span class="p">(</span><span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">size</span>
+    <span class="n">changed_indices</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span>  <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">interface_cells</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">cell_index</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">global_index</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">boundary_entities</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">interface_vertex</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">global_index</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">changed_indices</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+                        <span class="n">changed_indices</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_index_last</span>
+                        <span class="n">new_index</span> <span class="o">=</span> <span class="n">new_index_last</span>
+                        <span class="n">new_index_last</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">new_index</span> <span class="o">=</span> <span class="n">changed_indices</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">cls</span><span class="p">[</span><span class="n">cell_index</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">index</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">j</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;ERRORRRR&#39;</span><span class="p">)</span>
+                    <span class="bp">cls</span><span class="p">[</span><span class="n">cell_index</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_index</span>
+                    
+
+    <span class="n">coords_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">new_index_last</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
+    <span class="n">coords_new</span><span class="p">[:</span> <span class="n">coords</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">:</span> <span class="n">coords</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">coords</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">new_i</span> <span class="ow">in</span> <span class="n">changed_indices</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">coords_new</span><span class="p">[</span><span class="n">new_i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="n">new_mesh</span> <span class="o">=</span> <span class="n">dolfin_mesh</span><span class="p">(</span><span class="n">coords_new</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span>
+
+    <span class="n">interface_entities</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span><span class="s1">&#39;bool&#39;</span><span class="p">,</span> <span class="n">new_mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">boundary_entities</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span><span class="s1">&#39;bool&#39;</span><span class="p">,</span> <span class="n">new_mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    
+    <span class="n">interface_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">interface_keys</span><span class="p">)</span>
+    <span class="n">boundary_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">boundary_keys</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">new_mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">entity</span><span class="o">.</span><span class="n">num_entities</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">([</span><span class="nb">round</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">entity</span><span class="o">.</span><span class="n">midpoint</span><span class="p">()</span><span class="o">.</span><span class="n">array</span><span class="p">()])</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">interface_keys</span><span class="p">:</span>
+                <span class="n">interface_entities</span><span class="p">[</span><span class="n">entity</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+                    <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">([</span><span class="nb">round</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">e</span><span class="o">.</span><span class="n">midpoint</span><span class="p">()</span><span class="o">.</span><span class="n">array</span><span class="p">()])</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">boundary_keys</span><span class="p">:</span>
+                        <span class="n">boundary_entities</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">hdf</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">HDF5File</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">mpi_comm</span><span class="p">(),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">directory</span> <span class="o">+</span> <span class="n">name</span><span class="si">}</span><span class="s2">.h5&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+    <span class="n">hdf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">interface_entities</span><span class="p">,</span> <span class="s2">&quot;/interface&quot;</span><span class="p">)</span>
+    <span class="n">hdf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">boundary_entities</span><span class="p">,</span> <span class="s2">&quot;/boundary&quot;</span><span class="p">)</span>
+    <span class="n">hdf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">new_mesh</span><span class="p">,</span> <span class="s2">&quot;/mesh&quot;</span><span class="p">)</span>
+    <span class="n">hdf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="interface"><a class="viewcode-back" href="../../../src.InterfaceSolver.html#src.InterfaceSolver.DiscontinuousMesh.interface">[docs]</a><span class="k">def</span> <span class="nf">interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -169,10 +311,16 @@
 <span class="sd">        val</span>
 <span class="sd">            `int` by which will be labeled the interface facets </span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">interface</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span><span class="s2">&quot;size_t&quot;</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mesh</span><span class="o">.</span><span class="n">topology</span><span class="p">()</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">facets</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">topology</span><span class="p">()</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span>
+    <span class="n">interface</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span><span class="s2">&quot;size_t&quot;</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">entities</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
         <span class="n">mid</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">midpoint</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">mid</span><span class="o">.</span><span class="n">x</span><span class="p">(),</span><span class="n">mid</span><span class="o">.</span><span class="n">y</span><span class="p">()))</span><span class="o">&lt;</span><span class="n">eps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">func_val</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">mid</span><span class="o">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">mid</span><span class="o">.</span><span class="n">y</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">func_val</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">mid</span><span class="o">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">mid</span><span class="o">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">mid</span><span class="o">.</span><span class="n">z</span><span class="p">())</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">func_val</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
             <span class="n">interface</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
     <span class="k">return</span> <span class="n">interface</span></div>
 </pre></div>

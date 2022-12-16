@@ -7,7 +7,7 @@ from mpi4py import MPI
 from InterfaceSolver import NonlinearBrokenSolver
 
 
-continuous = True # run continuous or discontinuous problem
+continuous = False # run continuous or discontinuous problem
 comm = MPI.COMM_WORLD
 directory = 'mesh/'
 name='broken_mesh'

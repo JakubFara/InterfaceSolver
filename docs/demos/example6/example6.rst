@@ -15,8 +15,8 @@ Implementation
 ###################
 
 First we need to generate mesh which will be discontinuous along the discontinuity.
-For that purous there is function `make_broken_mesh` and we can create the mesh
-easily as it is implemented in `make_btoken_mesh.py`.
+For that purous there is function 'make_broken_mesh' and we can create the mesh
+easily as it is implemented in 'make_broken_mesh.py'.
 ::
 
     comm = MPI.COMM_WORLD
@@ -40,7 +40,7 @@ The mesh is saved to 'mesh/broken_mesh.h5'. In this file is not only the mesh,
 but also markers of edges and point, which are demonstrated below.
 
 .. image:: broken_grid.png
-    :scale: 75 %
+    :scale: 50 %
 
 The mesh we will load in the main file `broken_laplace.py`.
 
