@@ -1,5 +1,8 @@
 from mpi4py import MPI
-from dolfin import parameters, UnitSquareMesh, cells, MeshFunction, entities, UnitCubeMesh, Mesh, XDMFFile
+from dolfin import (
+    parameters, UnitSquareMesh, cells, MeshFunction, entities, UnitCubeMesh,
+    Mesh, XDMFFile
+)
 from InterfaceSolver import make_broken_mesh
 
 
@@ -18,5 +21,7 @@ if size == 1:
         y = edge.midpoint().y()
         if y == 0.5 and 0.2 < x < 0.6:
             interface[edge] = val
-    
-    make_broken_mesh(mesh, interface, val, directory='./mesh/', name='broken_mesh')
+
+    make_broken_mesh(
+        mesh, interface, val, directory='./mesh/', name='broken_mesh'
+    )

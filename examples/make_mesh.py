@@ -1,5 +1,7 @@
 from mpi4py import MPI
-from dolfin import parameters, UnitSquareMesh, cells, MeshFunction, info, UnitCubeMesh
+from dolfin import (
+    parameters, UnitSquareMesh, cells, MeshFunction, info, UnitCubeMesh
+)
 from InterfaceSolver import make_discontinuous_mesh
 
 
@@ -9,9 +11,9 @@ dim = 3
 resolution = 20
 
 if size == 1:
-    parameters["ghost_mode"] = "none"  
+    parameters["ghost_mode"] = "none"
     if dim == 2:
-        mesh = UnitSquareMesh(20, 20,"crossed")
+        mesh = UnitSquareMesh(20, 20, "crossed")
     elif dim == 3:
         mesh = UnitCubeMesh(20, 20, 20)
     directory = 'mesh/'
