@@ -1,8 +1,23 @@
 import dolfin as df
 import os
+import argparse
 
 
-mesh_name = f"tube3d"
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--mesh_level" , "-ml",
+    help=(
+        "navire slip parameter",
+    ),
+    default=1,
+    type=int,
+)
+
+args = vars(parser.parse_args())
+mesh_level = args["mesh_level"]
+
+mesh_lev = 1
+mesh_name = f"tube3d_lev{mesh_level}"
 mesh = df.Mesh(f"data/{mesh_name}.xml")
 domains=mesh.domains()
 
@@ -19,3 +34,5 @@ with df.HDF5File(mesh.mpi_comm(), f"data/{mesh_name}.h5", "w") as hdf5_file:
     hdf5_file.write(subdomains, "/subdomains")
     if boundaries is not None:
         hdf5_file.write(boundaries, "/boundaries")
+    df.File("data/subdomains.pvd") << subdomains
+    df.File("data/boundaries.pvd") << boundaries

@@ -8,15 +8,27 @@ from petsc4py import PETSc
 import numpy as np
 from dolfin.fem.assembling import _create_dolfin_form
 from dolfin import facets, edges, Cell, entities, assemble, PETScVector, info
+import csv
 
 
 PETSc_MAT_NEW_NONZERO_ALLOCATION_ERR = 19
 PETSc_FALSE = 0
 PETSc_TRUE = 1
-EPSILON = 0.0000000001
+# EPSILON = 0.00000000001
+EPSILON = 1e-14
 # EPSILON = 0.000001
 METHOD = 1
 
+def write_dofs_in_file(dofs, rank, space):
+    filename = f'dofs_{rank}_{space}.csv'
+    with open(filename, "w", newline='') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=',',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        spamwriter.writerow(["x", "y", "z", "rank", 'index'])
+        for key, val in dofs.items():
+            xyz = [float(v.strip(',')[1: -1]) for v in key[1: -1].split(' ')]
+            for indice in val.keys():
+                spamwriter.writerow([xyz[0], xyz[1], xyz[2], rank, indice])
 
 class InterfaceSolver(object):
     def __init__(
@@ -212,6 +224,7 @@ class InterfaceSolver(object):
     def local_pair_interface_dofs(self, pairs, sub_space, space_key):
         dofmap = self.V.dofmap()
         coors = self.V.tabulate_dof_coordinates().reshape((-1, self.dim))
+        global_coors = np.concatenate(self.comm.allgather(coors), axis=0)
         indices = [0, 0]
         if sub_space.num_sub_spaces() == 0:
             pairs[space_key] = {}
@@ -241,14 +254,17 @@ class InterfaceSolver(object):
                     dofs += edge_dofs
                 for dof in dofs:
                     global_dof = dofmap.local_to_global_index(dof)
-                    if dof < coors.shape[0]:
-                        coor = coors[dof, :]
-                        key = str([round(c, 5) for c in coor])
-                        indices[index] += 1
-                        if pairs[space_key].get(key):
-                            pairs[space_key][key][index] = global_dof
-                        else:
+                    # if dof < coors.shape[0]:
+                    # coor = coors[dof, :]
+                    coor = global_coors[global_dof, :]
+                    # key = str([round(c, 10) for c in coor])
+                    key = str([f"{c:10.10f}" for c in coor])
+                    indices[index] += 1
+                    if pairs[space_key].get(key):
+                        pairs[space_key][key][index] = global_dof
+                    else:
                             pairs[space_key][key] = {index: global_dof}
+            # write_dofs_in_file(pairs[space_key], self.rank, space_key)
         else:
             for i in range(sub_space.num_sub_spaces()):
                 self.local_pair_interface_dofs(
@@ -277,10 +293,20 @@ class InterfaceSolver(object):
                             break
 
                     if not found:
-                        # info(f"NOT FOUND PAIR !!!!!!!!!!!!!!! {key} {global_pair.keys()}")
+                        info(f"NOT FOUND PAIR !!!!!!!!!!!!!!! {key} {global_pair.keys()}")
                         # print(space_key, key, missing_index)
                         not_found += 1
         # print(not_found)
+        for space_key, space in pairs.items():
+            for coor, pair in space.items():
+                keys = list(pair.keys())
+                if len(keys) != 2:
+                    info(f"{pair} {coor} {space_key}")
+                else:
+                    if 0 != keys[0] and 0 != keys[1]:
+                        info(f"0 --- {pair}")
+                    if 1 != keys[0] and 1 != keys[1]:
+                        info(f"1 --- {pair}")
         return pairs
 
     def assign_interface(self, x1, x2, subspace, sign):
@@ -764,11 +790,12 @@ def dict_to_csr(dict_data, n):
 
 
 def global_to_local_dict(my_global_dict, own_range, comm):
-    global_dicts = comm.allgather(my_global_dict)
+    # global_dicts = comm.allgather(my_global_dict)
 
     my_local_dict = {}
 
-    for global_dict in global_dicts:
+    for rank in range(comm.Get_size()):
+        global_dict = comm.bcast(my_global_dict, root=rank)
         keys = list(global_dict.keys())
         my_rows = [k for k in keys if own_range[0] <= k < own_range[1]]
         for row in my_rows:

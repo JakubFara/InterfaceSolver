@@ -5,7 +5,7 @@ from InterfaceSolver import interface
 from dataclasses import dataclass
 from petsc4py.PETSc import Sys
 from ufl import atan_2
-from init_displacement import u_init, u_init_symmetric
+# from init_displacement import u_init, u_init_symmetric
 import argparse
 from mesh_partitioning import get_partitioned_mesh
 
@@ -116,7 +116,7 @@ if refined == 0:
         f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5',
         f'data/mesh_lev{mesh_level}_r16/mesh_continuous.h5'
     )
-    with df.HDF5File(comm, f"data/aorta_discontinuous_lev{mesh_level}_r16.h5", "r") as h5_file:
+    with df.HDF5File(comm, f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5', "r") as h5_file:
         # first we need to create an empty mesh
         # mesh = df.Mesh(comm)
         # load the data stored in `/mesh` to the mesh
@@ -173,7 +173,8 @@ w_ = df.TestFunction(V)
 (v, u, p) = df.split(w)
 (v0, u0, p0) = df.split(w0)
 (v_, u_, p_) = df.split(w_)
-u_init = df.Function(V_u)
+# u_init = df.Function(V_u)
+u_init = None
 
 labels = {
       "solid": 1,
@@ -191,8 +192,6 @@ labels = {
 }
 cell_val = labels["solid"]
 
-
-u_init = None
 
 if u_init != None:
     with df.XDMFFile(comm, f"{directory}/u_init.xdmf") as xdmf_u_init:

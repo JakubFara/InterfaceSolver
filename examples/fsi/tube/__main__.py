@@ -5,7 +5,6 @@ from InterfaceSolver import interface
 from dataclasses import dataclass
 from petsc4py.PETSc import Sys
 from ufl import atan_2
-from init_displacement import u_init
 
 from forms import (
     navier_stokes_ale,
@@ -19,7 +18,7 @@ from forms import (
 )
 
 theta_scheme_partam = 1.0
-theta = 0.5
+theta = 0.5 
 # maximal_radius = 0.016
 maximal_radius = 0.018
 
@@ -27,10 +26,10 @@ maximal_radius = 0.018
 class Parameters:
     rho_s: float = 1.0e3
     nu_s: float = 0.49
-    mu_s: float = 1e9
+    mu_s: float = 1e4
     rho_f: float = 1.05e3
     mu_f: float = 3.8955e-3
-    # mu_f: float = 1.0
+    # mu_f: float = 1.0 
     E: float = 2 * mu_s * (1 + nu_s)
     lam: float = E * nu_s / ((1 + nu_s) * (1 - 2 * nu_s))
 
@@ -48,30 +47,23 @@ class Lables:
 labels = Lables()
 
 
-dt = df.Constant(0.01)
+dt = 0.005
 t = 0.0
 t_end = 4.0
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 
-# df.parameters["ghost_mode"] = "none"
 df.parameters["std_out_all_processes"] = False
-# load the discontinuous mesh. Make sure you build that -> python make_mesh.py
-# mesh = Mesh("mesh/tube3d.xml")
 with df.HDF5File(comm, "data/tube3d_discontinuous.h5", "r") as h5_file:
     mesh = df.Mesh(comm)
     h5_file.read(mesh, "/mesh", False)
     marker = df.MeshFunction('size_t', mesh, 3)
     h5_file.read(marker, "/cell_marker")
+    bndry_marker = df.MeshFunction('size_t', mesh, 2)
+    h5_file.read(bndry_marker, "/facet_marker")
 
 directory = f"results/tube3d/theta{theta}/radius{maximal_radius}/"
-# label the top and the bottom subdomains
-# marker = df.MeshFunction("size_t", mesh, mesh.topology().dim(), labels.fluid)
-
-# radius = 0.2
-# radius2 = 0.3
-# tube_length = 2.0
 
 radius = 0.012
 radius2 = 0.002
@@ -79,9 +71,6 @@ tube_length = 0.044
 
 u_init_expr = df.Expression(
     (
-        # "0.0000001 * x[0] / pow(pow(x[0], 2) + pow(x[1], 2), 0.5) * min(pow(pow(x[0], 2) + pow(x[1], 2), 0.5), radius) * exp(-10 * pow(x[2] - length/2, 2)) ",
-        # "0.0000001 * x[1] / pow(pow(x[0], 2) + pow(x[1], 2), 0.5) * min(pow(pow(x[0], 2) + pow(x[1], 2), 0.5), radius) * exp(-10 * pow(x[2] - length/2, 2)) ",
-        # "0",
         "0.005 * x[0] / max(pow(pow(x[0], 2) + pow(x[1], 2), 0.5), 0.000001) * min(pow(pow(x[0], 2) + pow(x[1], 2), 0.5), radius) / radius * exp(-10000 * pow(x[2], 2)) ",
         "0.005 * x[1] / max(pow(pow(x[0], 2) + pow(x[1], 2), 0.5), 0.000001) * min(pow(pow(x[0], 2) + pow(x[1], 2), 0.5), radius) / radius * exp(-10000 * pow(x[2], 2)) ",
         "0",
@@ -104,8 +93,8 @@ class UInit(df.UserExpression):
             D = self.D_in
         else:
             D = self.D_out
-        # r_scale = min(df.sqrt(x[0]**2 + x[1]**2) / (self.D_in / 2), 1)
-        r_scale = df.sqrt(x[0]**2 + x[1]**2) / (self.D_in / 2)
+        # r_scale = min(df.sqrt(x[0]**2 + x[1]**2) / (self.D_in / 2), 1) 
+        r_scale = df.sqrt(x[0]**2 + x[1]**2) / (self.D_in / 2) 
         value[0] = (
             r_scale * (D / 2 + (self.R + self.r - D / 2) * exp_shape) * df.cos(phi)
             - r_scale * self.lam * self.r * df.exp(-8000 * x[2]**2) * df.cos(((self.R + self.r) / self.r) * phi)
@@ -116,8 +105,8 @@ class UInit(df.UserExpression):
             - r_scale * self.lam * self.r * df.exp(-8000 * x[2]**2) * df.sin(((self.R + self.r) / self.r) * phi)
             - x[1]
         )
-        value[2] = 0
-
+        value[2] = 0 
+    
     def exp_shape(self, x):
         if x[2] < 0:
             return df.exp(- self.popt_in[0] * x[2]**2 - self.popt_in[1] * x[2]**4)
@@ -125,10 +114,10 @@ class UInit(df.UserExpression):
             return df.exp(- self.popt_out[0] * x[2]**2 - self.popt_out[1] * x[2]**4)
 
     def set_parameters(self):
-        self.L = 0.044
-        self.lam = 0.5
-        self.D_in = 0.024
-        self.D_out = 0.026
+        self.L = 0.044     
+        self.lam = 0.5 
+        self.D_in = 0.024 
+        self.D_out = 0.026 
         if self.r_max == 0.016:
            self.r = 0.00355
            self.R = 0.01065
@@ -140,7 +129,7 @@ class UInit(df.UserExpression):
            self.popt_in = [5.66912918e+03, 7.66378929e+07]
            self.popt_out = [3.04617628e+03, 9.46300951e+07]
         elif self.r_max == 0.02:
-           self.r = 0.00445
+           self.r = 0.00445 
            self.R = 0.01335
            self.popt_in = [5.36141778e+03, 7.87273868e+07]
            self.popt_out = [3.44279531e+03, 9.18833710e+07]
@@ -150,11 +139,6 @@ class UInit(df.UserExpression):
 
 u_init_expr = UInit(maximal_radius)
 
-# for c in df.cells(mesh):
-#     r = c.midpoint().x() ** 2 + c.midpoint().y() ** 2
-#     if r > radius**2:
-#         marker[c] = labels.solid
-#
 labels.fluid_sign = "-"  # plus corresponds to the cell val
 labels.solid_sign = "+"
 cell_val = labels.solid  # bottom
@@ -175,53 +159,7 @@ w_ = df.TestFunction(V)
 (v0, u0, p0) = df.split(w0)
 (v_, u_, p_) = df.split(w_)
 # u_init = df.Function(V_u)
-# u_init = df.project(u_init_expr, V_u)
-
-
-# Boundary
-labels_bndry = {
-    "inflow_f": 1,
-    "outflow_f": 2,
-    "inflow_s": 3,
-    "outflow_s": 4,
-    "mid_s": 5,
-    "mid_f": 6,
-    "out": 7,
-}
-
-bndry_marker = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
-# interface = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
-for facet in df.facets(mesh):
-    cells = [c for c in df.cells(facet)]
-    # if len(cells) == 2:
-    #     continue
-    mid_facet = facet.midpoint()
-    x = float(mid_facet.x())
-    y = float(mid_facet.y())
-    z = float(mid_facet.z())
-    r = x**2 + y**2
-    eps = 1e-6
-    if r < radius**2 and abs(z + tube_length/2) < eps:
-        bndry_marker[facet] = labels_bndry["inflow_f"]
-    elif r > radius**2 and abs(z + tube_length/2) < eps:
-        bndry_marker[facet] = labels_bndry["inflow_s"]
-    elif r < radius**2 and abs(z - tube_length/2) < eps:
-    # elif r < radius**2 and z == tube_length/2:
-        bndry_marker[facet] = labels_bndry["outflow_f"]
-    elif r > radius**2 and abs(z - tube_length/2) < eps:
-    # elif r > radius**2 and z == tube_length/2:
-        bndry_marker[facet] = labels_bndry["outflow_s"]
-    elif radius**2 + 0.000003 > r > radius**2 - 0.000003:
-        cell = [c for c in df.cells(facet)][0]
-        # interface[facet] = 1
-        if marker[cell] == labels.fluid:
-            bndry_marker[facet] = labels_bndry["mid_f"]
-        else:
-            bndry_marker[facet] = labels_bndry["mid_s"]
-    elif (radius + radius2)**2 - 0.000003 <= r:
-        bndry_marker[facet] = labels_bndry["out"]
-
-u_init = u_init(mesh, radius, radius2, bndry_marker, labels_bndry, order=2)
+u_init = df.project(u_init_expr, V_u)
 
 with df.XDMFFile(comm, f"{directory}/u_init.xdmf") as xdmf_u_init:
     xdmf_u_init.parameters["flush_output"] = True
@@ -229,6 +167,52 @@ with df.XDMFFile(comm, f"{directory}/u_init.xdmf") as xdmf_u_init:
     u_init.rename("u_init", "u_init")
     xdmf_u_init.write(u_init, 0)
 
+# Boundary
+labels_bndry = {
+    "inflow_f": 11,
+    "outflow_f": 12,
+    "mid_f": 13,
+    "inflow_s": 21,
+    "outflow_s": 22,
+    "mid_s": 24,
+}
+
+# bndry_marker = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
+# # interface = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
+# for facet in df.facets(mesh):
+#     cells = [c for c in df.cells(facet)]
+#     mid_facet = facet.midpoint()
+#     x = float(mid_facet.x())
+#     y = float(mid_facet.y())
+#     z = float(mid_facet.z())
+#     r = x**2 + y**2
+#     eps = 1e-6
+#     if r < radius**2 and abs(z + tube_length/2) < eps:
+#         bndry_marker[facet] = labels_bndry["inflow_f"]
+#     elif r > radius**2 and abs(z + tube_length/2) < eps:
+#         bndry_marker[facet] = labels_bndry["inflow_s"]
+#     elif r < radius**2 and abs(z - tube_length/2) < eps:
+#         bndry_marker[facet] = labels_bndry["outflow_f"]
+#     elif r > radius**2 and abs(z - tube_length/2) < eps:
+#         bndry_marker[facet] = labels_bndry["outflow_s"]
+#     elif radius**2 + 0.000003 > r > radius**2 - 0.000003:
+#         cell = [c for c in df.cells(facet)][0]
+#         if marker[cell] == labels.fluid:
+#             bndry_marker[facet] = labels_bndry["mid_f"]
+#         else:
+#             bndry_marker[facet] = labels_bndry["mid_s"]
+
+
+for facet in df.facets(mesh):
+    cells = [c for c in df.cells(facet)]
+    if bndry_marker[facet] == labels_bndry["mid_f"]:
+        print("++")
+        if marker[cells[0]] == labels.solid:
+            print("---")
+            bndry_marker[facet] = labels_bndry["mid_s"]
+
+
+# save markers for visualizarion
 file_xml = df.File("bndry_marker.pvd")
 file_xml << bndry_marker
 
@@ -244,10 +228,10 @@ def inflow_average(t):
 
 def velocity(t: float) -> float:
     tp = t%1.0
-    if t > 0.5:
-        return 0.65
+    if tp > 0.3:
+        return 0.0
     else:
-        return t / 0.5 * 0.65
+        return - 0.7 * tp * (tp - 0.3) / (0.15 * (0.15))
 
 vel_avg = 0.65
 
@@ -262,25 +246,16 @@ else:
         "2.0 * theta * (pow(r, 2) - pow(x[0], 2) - pow(x[1], 2) )))"
         "/ ( 4.0 * gamma * mu * (1 - theta) * r + theta * r * r)"
     )
-    # profile = "v*2.0*(pow(r, 2) - (pow(x[0], 2) + pow(x[1], 2)))/(r*r)"
     inflow_expr = df.Expression(
         (0, 0, profile),
         r=radius,
         gamma=3.08,
         mu=parameters.mu_f,
         theta=theta,
-        # t=0.9,
         v=vel_avg,
         degree=4
     )
 
-
-# inflow_expr = Expression(
-#     ("0.0", "0.0", "-10 * t * (pow(x[0], 2) + pow(x[1], 2) - pow(r, 2) - 0.001)"),
-#     t=0.0,
-#     r=radius,
-#     degree=2,
-# )
 
 zero_vec = df.Constant((0.0, 0.0, 0.0))
 bc_v_fluid_inflow = df.DirichletBC(V.sub(0), inflow_expr, bndry_marker, labels_bndry["inflow_f"])
@@ -295,19 +270,14 @@ bc_u_fluid_outflow = df.DirichletBC(V.sub(1), zero_vec, bndry_marker, labels_bnd
 bc_u_solid_inflow = df.DirichletBC(V.sub(1), zero_vec, bndry_marker, labels_bndry["inflow_s"])
 bc_u_solid_outflow = df.DirichletBC(V.sub(1), zero_vec, bndry_marker, labels_bndry["outflow_s"])
 
-# bc_v_cylinder = DirichletBC(V.sub(0), zero_vec, cylinder)
-# bc_u_cylinder = DirichletBC(V.sub(1), zero_vec, cylinder)
 bcs_solid = [
     bc_v_solid_outflow,
     bc_v_solid_inflow,
     bc_u_solid_outflow,
     bc_u_solid_inflow,
-    # bc_v_cylinder,
-    # bc_u_cylinder,
 ]
 
 bcs_fluid = [
-    # bc_v_fluid_outflow,
     bc_v_fluid_inflow,
     bc_u_fluid_outflow,
     bc_u_fluid_inflow,
@@ -332,7 +302,7 @@ def interface_func(x, y, z):
     return x**2 + y**2 - radius**2
 
 
-interface_label = interface(mesh, interface_func, val=1, eps=0.000003)
+interface_label = interface(mesh, interface_func, val=1, eps=0.0000003)
 dX = df.Measure("dx")(domain=mesh, subdomain_data=marker, metadata={"quadrature_degree": 8})
 ds = df.Measure("ds")(domain=mesh, subdomain_data=bndry_marker, metadata={"quadrature_degree": 8})
 
@@ -435,17 +405,15 @@ else:
     )
     bcs_zero = [bcm_u]
 
-with df.HDF5File(comm, directory + "result.h5", 'w') as hdf_file:
-    hdf_file.write(mesh, '/mesh')
 # a0 += l0
-t += float(dt)
+t += dt
 # inflow_expr.t = t
-n = 0
 while t < t_end:
     Sys.Print(f"    t = {t}")
     inflow_expr.v = velocity(t)
+    df.info(f"velocity = {velocity(t)}")
     # solve
-    for i in range(10):
+    for i in range(5):
         res, conv_reason = solver.solve(
             a_solid,
             a_fluid,
@@ -461,10 +429,6 @@ while t < t_end:
             continue
         if res[1] < 1e-8:
             break
-    if i < 2 and t > 0.5:
-        dt.assign(dt * 1.2)
-    if i > 4 and t > 0.5:
-        dt.assign(dt * 0.8)
     w0.assign(w)
     (v, u, p) = w.split(True)
     # save and plot
@@ -473,10 +437,4 @@ while t < t_end:
     xdmf_v.write(v, t)
     xdmf_u.write(u, t)
     xdmf_u_init.write(u_init, t)
-    with df.HDF5File(comm, directory + "result.h5", 'a') as hdf_file:
-        hdf_file.write(v, f"{n}/v")
-        hdf_file.write(u, f"{n}/u")
-        hdf_file.write(p, f"{n}/p")
-        hdf_file.write(u_init, f"{n}/u_init")
-    t += float(dt)
-    n += 1
+    t += dt

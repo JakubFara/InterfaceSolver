@@ -1,13 +1,27 @@
 from InterfaceSolver import make_discontinuous_mesh
 import dolfin as df
 import json
+import argparse
 
 
 # define mpi communicator
 comm = df.MPI.comm_world
 # run this script in serial
-mesh_file_continuous = "data/tube3d.h5"
-mesh_file_discontinuous = "data/tube3d_discontinuous.h5"
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--mesh_level" , "-ml",
+    help=(
+        "navire slip parameter",
+    ),
+    default=1,
+    type=int,
+)
+
+args = vars(parser.parse_args())
+mesh_level = args["mesh_level"]
+mesh_file_continuous = f"data/tube3d_lev{mesh_level}.h5"
+mesh_file_discontinuous = f"data/tube3d_discontinuous_lev{mesh_level}.h5"
 
 
 with df.HDF5File(comm, mesh_file_continuous, "a") as h5_file:
@@ -22,7 +36,7 @@ with df.HDF5File(comm, mesh_file_continuous, "a") as h5_file:
     facet_marker = df.MeshFunction('size_t', continuous_mesh, dim - 1)
     # we load the data to the subdomains markers
     h5_file.read(cell_marker, "/subdomains")
-    # h5_file.read(facet_marker, "/facet_marker")
+    h5_file.read(facet_marker, "/boundaries")
 
 
 def hash_point_to_string(point: df.Point, dim, num_dig=5):
@@ -63,10 +77,14 @@ discontinuous_cell_marker = make_discontinuous_marker(
     continuous_mesh, discontinuous_mesh, cell_marker, "cell"
 )
 
+discontinuous_facet_marker = make_discontinuous_marker(
+    continuous_mesh, discontinuous_mesh, facet_marker, "facet"
+)
+
 with df.HDF5File(comm, mesh_file_discontinuous, "w") as h5_file:
     h5_file.write(discontinuous_mesh, "/mesh")
     h5_file.write(discontinuous_cell_marker, "/cell_marker")
-    # h5_file.write(discontinuous_facet_marker, "/facet_marker")
+    h5_file.write(discontinuous_facet_marker, "/facet_marker")
 
 
 comm = df.MPI.comm_world
@@ -83,3 +101,4 @@ with df.HDF5File(comm, mesh_file_discontinuous, "a") as h5_file:
     facet_marker = df.MeshFunction('size_t', mesh, dim - 1)
     # we load the data to the subdomains markers
     h5_file.read(cell_marker, "/cell_marker")
+    h5_file.read(facet_marker, "/facet_marker")
