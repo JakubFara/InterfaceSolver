@@ -1,9 +1,12 @@
 import dolfin as df
 from mpi4py import MPI
-from InterfaceSolver import NonlinearInterfaceSolver
+
 from InterfaceSolver import interface
+from InterfaceSolver import NonlinearInterfaceSolver
 from dataclasses import dataclass
 from petsc4py.PETSc import Sys
+from petsc4py import PETSc
+
 from ufl import atan_2
 # from init_displacement import u_init, u_init_symmetric
 import argparse
@@ -25,6 +28,7 @@ df.parameters["std_out_all_processes"] = False
 
 parser = argparse.ArgumentParser()
 df.parameters["ghost_mode"] = "none"
+df.parameters['form_compiler']['quadrature_degree'] = 4
 
 parser.add_argument(
     "--shear_modulus" , "-sm",
@@ -157,7 +161,7 @@ else:
         h5_file.read(interface_marker, "/interface_marker")
 
 
-directory = f"/usr/work/fara/aorta3d/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
+directory = f"./results/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
 # function spaces
 Ep = df.FiniteElement("CG", mesh.ufl_cell(), 1)
 Eu = df.VectorElement("CG", mesh.ufl_cell(), 2)
@@ -311,14 +315,40 @@ options = {
         "rtol": 1.0e-8,
         "atol": 1.0e-8,
         "stol": 1.0e-8,
-        "max_it": 4,
-        "type": "ksponly",
-        # 'type': 'newtonls',
-        # 'linesearch_type': "basic",
-        # 'linesearch_type': "bt",
-        # 'linesearch_damping': 0.999
+        "max_it": 40,
+        "type": "ngmres",
+        'linesearch_type': 'basic',
+        "monitor": '',
+        'converged_reason': '',
+        #"view": "",
     },
-    "pc_": {"type": "lu", "factor_mat_solver_type": "mumps"},
+    "npc_": {
+        'snes_': {
+            'monitor': '',
+            'converged_reason': '',
+            'type': 'newtonls',
+            'linesearch_type': 'basic',
+            'linesearch_damping': 0.8,
+            'rtol': 1.0,
+            'max_it': 1,
+            "lag_jacobian": -2,
+            'lag_jacobian_persists': 1,
+            'convergence_test': 'skip',
+            #'norm_schedule': 0,
+            'force_iteration': '',
+        },
+        "ksp_": {
+            "type": "preonly",
+            #"monitor": "",
+            #"converged_reason": '',
+            #"rtol": 1e-5,
+            # 'atol': 1e-2
+        },
+        "pc_": {
+            "type": "lu",
+            "factor_mat_solver_type": "mumps"
+        },
+    },
     "mat_": {
         "type": "aij",
         "mumps_": {
@@ -328,17 +358,12 @@ options = {
             # 'icntl_24': 1
         },
     },
-    "ksp_": {
-        "type": "preonly",
-        "rtol": 1e-5,
-        # 'atol': 1e-2
-    },
 }
 
 solver = NonlinearInterfaceSolver(
     w, marker, interface_marker,
-    interface_value=labels["interface"], cell_val=cell_val, params=options
-)
+    interface_value=labels["interface"], cell_val=cell_val, params=options,
+    monitor=True)
 
 parameters_fluid = NavierStokesParameters(mu=parameters.mu_f, rho=parameters.rho_f, dt=dt)
 # parameters_solid = NeoHookeanParameters(g=mu1, rho=parameters.rho_s, dt=dt)
@@ -418,37 +443,28 @@ else:
 # a0 += l0
 t += float(dt)
 # inflow_expr.t = t
+
+solver.setup(
+    a_solid,
+    a_fluid,
+    a_interface,
+    bcs0=bcs_solid,
+    bcs1=bcs_fluid,
+    bcs_zero0=[],
+    bcs_zero1=bcs_zero,
+    dirichlet_interface=dirichlet_interface,
+)
+
+
 while t < t_end:
     Sys.Print(f"    t = {t}")
     inflow_expr.v = velocity(t)
     converged = False
-    while converged is False:
-        for i in range(7):
-            res, conv_reason = solver.solve(
-                a_solid,
-                a_fluid,
-                a_interface,
-                bcs0=bcs_solid,
-                bcs1=bcs_fluid,
-                bcs_zero0=[],
-                bcs_zero1=bcs_zero,
-                dirichlet_interface=dirichlet_interface,
-            )
-            df.info(f"{res}")
-            if res.get(1) == None:
-                continue
-            if res[1] < 1e-8:
-                converged = True
-                if i < 4:
-                    dt.assign(min(float(dt) * 1.2, dt_base))
-                break
-        if converged is False or i > 5:
-            df.info("_____________")
-            dt.assign(float(dt) * 0.9)
-            solver.u.assign(w0)
-            w.assign(w0)
-            solver.x = df.as_backend_type(w.vector())
-            solver.x_petsc = solver.x.vec()
+    PETSc.Options().setValue('npc_snes_lag_jacobian', -2)
+    solver.snes.setFromOptions()
+    res, conv_reason = solver.solve()
+    Sys.Print(f"{res}")
+
     w0.assign(w)
     (v, u, p) = w.split(True)
     # save and plot

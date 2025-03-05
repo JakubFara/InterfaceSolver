@@ -1,4 +1,6 @@
 import dolfin as df
+df.parameters['form_compiler']['quadrature_degree'] = 4
+
 from dataclasses import dataclass
 
 

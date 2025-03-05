@@ -151,7 +151,7 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         J.assemble()
         return True
 
-    def solve(self, a0, a1, a_interface,
+    def setup(self, a0, a1, a_interface,
             bcs0=None, bcs1=None, bcs_zero0=None, bcs_zero1=None,
             force_equality=None, dirichlet_interface=None,
             *args, **kwargs):
@@ -228,8 +228,9 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         self.snes.setFromOptions()
         self.snes.setUp()
         self.snes.setSolution(self.xx)
-        self.snes.solve(None, self.xx)
 
+    def solve(self):
+        self.snes.solve(None, self.xx)
         for subspace, sign in self.force_equality:
             self.assign_interface(self.x.vec(), self.x.vec(), subspace, sign)
         self.x.update_ghost_values()
@@ -246,7 +247,7 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         def monitor_func(snes, its, rnorm, *args, **kwargs):
             self.reshist[its] = rnorm
         if monitor is True:
-            self.snes.cancelMonitor()
+            #self.snes.cancelMonitor()
             self.snes.setMonitor(monitor_func)
         # set default parameters
         opts_setup(DEFAULT_OPTIONS)
