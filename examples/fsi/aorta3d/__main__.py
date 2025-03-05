@@ -324,8 +324,8 @@ options = {
     },
     "npc_": {
         'snes_': {
-            'monitor': '',
-            'converged_reason': '',
+            #'monitor': '',
+            #'converged_reason': '',
             'type': 'newtonls',
             'linesearch_type': 'basic',
             'linesearch_damping': 0.8,
