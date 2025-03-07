@@ -336,7 +336,7 @@ options_snesnpc = {
             'type': 'newtonls',
             'linesearch_type': 'basic',
             'linesearch_damping': 0.5,
-            'rtol': 1.0,
+            'rtol': 0.9,   ### !!!!!!! this decides when to rebuild jacob
             #'divergence_tolerance': 1.0,
             'max_it': 1,
             "lag_jacobian": -2,
