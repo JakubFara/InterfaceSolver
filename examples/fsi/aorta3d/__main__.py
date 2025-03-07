@@ -333,7 +333,7 @@ options_snesnpc = {
     },
     "npc_": {
         'snes_': {
-            'monitor': '',
+            #'monitor': '',
             #'converged_reason': '',
             'type': 'newtonls',
             'linesearch_type': 'basic',
@@ -518,34 +518,46 @@ solver.setup(
 
 solver.snes.npc.setMonitor(my_monitor)
 
+reasons=vars(PETSc.SNES.ConvergedReason)
+reasons_names = {v: k for k, v in reasons.items() if isinstance(v, int)}
 
 while t < t_end:
-    Sys.Print(f"    t = {t}")
+    Sys.Print(f"TIME STEP {n}:  {t=}")
     inflow_expr.v = velocity(t)
     converged = False
     #PETSc.Options().setValue('npc_snes_lag_jacobian', -2)
     #solver.snes.setFromOptions()
     solver.solve()
-
+    reason=solver.snes.getConvergedReason()
+    if reason<0:
+        Sys.Print(f"SNES diverged with {reasons_names[reason]}")
+        break
+    
     w0.assign(w)
-    (v, u, p) = w.split(True)
-    # save and plot
-    u.rename("u", "u")
-    v.rename("v", "v")
-    p.rename("p", "p")
 
-    xdmf_v.write(v, t)
-    xdmf_u.write(u, t)
-    xdmf_p.write(p, t)
+    
+    if n%10 : # write every 10th step
+        Sys.Print(f"  SAVE XDMF/h5 {n}:  {t=}")
+        (v, u, p) = w.split(True)
+        # save and plot
+        u.rename("u", "u")
+        v.rename("v", "v")
+        p.rename("p", "p")
 
-    if u_init != None:
-        xdmf_u_init.write(u_init, t)
-    with df.HDF5File(comm, directory + "result.h5", 'a') as hdf_file:
-        hdf_file.write(v, f"{n}/v")
-        hdf_file.write(u, f"{n}/u")
-        hdf_file.write(p, f"{n}/p")
+        xdmf_v.write(v, t)
+        xdmf_u.write(u, t)
+        xdmf_p.write(p, t)
+
         if u_init != None:
-            hdf_file.write(u_init, f"{n}/u_init")
+            xdmf_u_init.write(u_init, t)
+
+        with df.HDF5File(comm, directory + "result.h5", 'a') as hdf_file:
+            hdf_file.write(v, f"{n}/v")
+            hdf_file.write(u, f"{n}/u")
+            hdf_file.write(p, f"{n}/p")
+            if u_init != None:
+                hdf_file.write(u_init, f"{n}/u_init")
+                
     if rank == 0:
         with open(directory + "checkpoint.txt", 'w') as ch_file:
             ch_file.write(f"{n} {t}")
