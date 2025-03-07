@@ -258,7 +258,6 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         self.snes.setFromOptions()
         self.ksp.setFromOptions()
 
-
 class SNESMonitor():
     def __init__(self):
         self.init = True

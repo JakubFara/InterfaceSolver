@@ -28,7 +28,7 @@ df.parameters["std_out_all_processes"] = False
 
 parser = argparse.ArgumentParser()
 df.parameters["ghost_mode"] = "none"
-df.parameters['form_compiler']['quadrature_degree'] = 4
+df.parameters['form_compiler']['quadrature_degree'] = 8
 
 parser.add_argument(
     "--shear_modulus" , "-sm",
@@ -179,6 +179,8 @@ w_ = df.TestFunction(V)
 (v_, u_, p_) = df.split(w_)
 # u_init = df.Function(V_u)
 u_init = None
+
+df.info(f"{V.dim()=}")
 
 labels = {
       "solid": 1,
@@ -331,8 +333,8 @@ options = {
             'linesearch_damping': 0.8,
             'rtol': 1.0,
             'max_it': 1,
-            "lag_jacobian": -2,
-            'lag_jacobian_persists': 1,
+            "lag_jacobian": 8, #-2
+            'lag_jacobian_persists': 1, #1
             'convergence_test': 'skip',
             #'norm_schedule': 0,
             'force_iteration': '',
