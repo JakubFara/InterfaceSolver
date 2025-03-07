@@ -310,39 +310,49 @@ dxf = dX(labels["fluid"])
 dxs = dX(labels["solid"])
 
 normal = df.FacetNormal(mesh)
-options = {
+
+# options for snes-ngmres-newton-mumps with lagedd jacobian
+options_snesnpc = {
+    'assembly_monitor': '',
     "snes_": {
         "rtol": 1.0e-8,
         "atol": 1.0e-8,
         "stol": 1.0e-8,
-        "max_it": 40,
+        "max_it": 200,
         "type": "ngmres",
-        'linesearch_type': 'basic',
+        #'ngmres_monitor': '',
+        'ngmres_restart_fm_rise': '',
+        'linesearch_type': 'bt',
         "monitor": '',
         'converged_reason': '',
+        'max_linear_solve_fail': -1,
+        'max_fail': -1,
         #"view": "",
     },
     "npc_": {
         'snes_': {
-            #'monitor': '',
+            'monitor': '',
             #'converged_reason': '',
             'type': 'newtonls',
             'linesearch_type': 'basic',
-            'linesearch_damping': 0.8,
+            'linesearch_damping': 0.5,
             'rtol': 1.0,
+            #'divergence_tolerance': 1.0,
             'max_it': 1,
             "lag_jacobian": -2,
             'lag_jacobian_persists': 1,
-            'convergence_test': 'skip',
+            #'convergence_test': 'skip',
             #'norm_schedule': 0,
             'force_iteration': '',
+            'max_linear_solve_fail': -1,
+            'max_fail': -1,
         },
         "ksp_": {
             "type": "preonly",
             #"monitor": "",
             #"converged_reason": '',
-            #"rtol": 1e-5,
-            # 'atol': 1e-2
+            #"rtol": 1e-20,
+            #'atol': 1e-12,
         },
         "pc_": {
             "type": "lu",
@@ -353,17 +363,66 @@ options = {
         "type": "aij",
         "mumps_": {
             # 'icntl_1': 1,
-            "cntl_1": 1e-5,
+            "cntl_1": 1e-14,
             "icntl_14": 200,
-            # 'icntl_24': 1
+            'icntl_24': 1
         },
     },
 }
 
+# options for normal snes-newtonls-mumps with possibly lagged jacobian
+options_snes = {
+    'assembly_monitor': '',
+    "snes_": {
+        "rtol": 1.0e-8,
+        "atol": 1.0e-8,
+        "stol": 1.0e-8,
+        "max_it": 200,
+        "type": "newtonls",
+        'linesearch_type': 'nleqerr',
+        "monitor": '',
+        'converged_reason': '',
+        #"view": "",
+        "lag_jacobian": -2,
+        'lag_jacobian_persists': 1,
+    },
+    "ksp_": {
+        "type": "preonly",
+    },
+    "pc_": {
+        "type": "lu",
+        "factor_mat_solver_type": "mumps"
+    },
+    "mat_": {
+        "type": "aij",
+        "mumps_": {
+            # 'icntl_1': 1,
+            "cntl_1": 1e-14,
+            "icntl_14": 200,
+            'icntl_24': 1
+        },
+    },
+}
+
+def my_monitor(snes, its, rnorm, *args, **kwargs):
+    #Sys.Print(f"{snes.getOptionsPrefix()=} {its=} {rnorm=} {snes.reason=}")
+    #Sys.Print(f"{snes.getConvergenceHistory()=}")
+    if snes.hasNPC() :
+        #Sys.Print(f"{snes.npc.getOptionsPrefix()=} {its=} {rnorm=} {snes.npc.reason=}")
+        #Sys.Print(f"{snes.npc.getConvergenceHistory()=}")
+        if snes.npc.reason<0:
+            Sys.Print(f"{snes.npc.getOptionsPrefix()=} {snes.npc.reason=} do jacobian reset next.....")
+            PETSc.Options().setValue('npc_snes_lag_jacobian', -2)
+            snes.setFromOptions()
+    return
+    
 solver = NonlinearInterfaceSolver(
     w, marker, interface_marker,
-    interface_value=labels["interface"], cell_val=cell_val, params=options,
-    monitor=True)
+    interface_value=labels["interface"], cell_val=cell_val, params=options_snesnpc,
+    monitor=my_monitor)
+
+
+#PETSc.Options().view()
 
 parameters_fluid = NavierStokesParameters(mu=parameters.mu_f, rho=parameters.rho_f, dt=dt)
 # parameters_solid = NeoHookeanParameters(g=mu1, rho=parameters.rho_s, dt=dt)
@@ -455,15 +514,16 @@ solver.setup(
     dirichlet_interface=dirichlet_interface,
 )
 
+solver.snes.npc.setMonitor(my_monitor)
+
 
 while t < t_end:
     Sys.Print(f"    t = {t}")
     inflow_expr.v = velocity(t)
     converged = False
-    PETSc.Options().setValue('npc_snes_lag_jacobian', -2)
-    solver.snes.setFromOptions()
-    res, conv_reason = solver.solve()
-    Sys.Print(f"{res}")
+    #PETSc.Options().setValue('npc_snes_lag_jacobian', -2)
+    #solver.snes.setFromOptions()
+    solver.solve()
 
     w0.assign(w)
     (v, u, p) = w.split(True)
