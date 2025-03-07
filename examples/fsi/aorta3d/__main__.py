@@ -536,7 +536,7 @@ while t < t_end:
     w0.assign(w)
 
     
-    if n%4 : # write every 4th step
+    if n%4==0 : # write every 4th step
         Sys.Print(f"  SAVE XDMF/h5 {n}:  {t=}")
         (v, u, p) = w.split(True)
         # save and plot
