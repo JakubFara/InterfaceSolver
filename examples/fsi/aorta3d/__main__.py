@@ -486,7 +486,7 @@ else:
 if not load_from_checkpoint:
     with df.HDF5File(comm, directory + "result.h5", 'w') as hdf_file:
         hdf_file.write(mesh2, '/mesh')
-    n = 0
+    n = 1
 else:
     with df.HDF5File(comm, directory + "result.h5", 'r') as hdf_file:
         hdf_file.read(v, f"{n}/v")
@@ -536,7 +536,7 @@ while t < t_end:
     w0.assign(w)
 
     
-    if n%4==0 : # write every 4th step
+    if n%8==0 : # write every 8th step
         Sys.Print(f"  SAVE XDMF/h5 {n}:  {t=}")
         (v, u, p) = w.split(True)
         # save and plot
