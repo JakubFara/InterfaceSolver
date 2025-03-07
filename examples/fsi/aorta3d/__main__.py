@@ -92,7 +92,7 @@ radius2 = 0.002
 tube_length = 0.044
 dt = df.Constant(dt_base)
 t = 0
-t_end = 4.0
+t_end = 3.0
 
 theta_scheme_partam = 1.0
 # maximal_radius = 0.016
@@ -337,19 +337,13 @@ options_snesnpc = {
             #'converged_reason': '',
             'type': 'newtonls',
             'linesearch_type': 'basic',
-            'linesearch_damping': 0.5,
-            'rtol': 0.9,   ### !!!!!!! this decides when to rebuild jacob
+            'linesearch_damping': 0.8,
+            'rtol': 0.99,   ### !!!!!!! this decides when to rebuild jacob
             #'divergence_tolerance': 1.0,
             'max_it': 1,
-<<<<<<< HEAD
-            "lag_jacobian": 8, #-2
-            'lag_jacobian_persists': 1, #1
-            'convergence_test': 'skip',
-=======
             "lag_jacobian": -2,
             'lag_jacobian_persists': 1,
             #'convergence_test': 'skip',
->>>>>>> 36bd4c2e41f6940291b920a8d69aa1cec0400352
             #'norm_schedule': 0,
             'force_iteration': '',
             'max_linear_solve_fail': -1,
