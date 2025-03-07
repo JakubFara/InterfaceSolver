@@ -5,7 +5,7 @@ from dolfin import (
     PETScVector, assemble, PETScMatrix, derivative, SystemAssembler, Form,
     as_backend_type, info, DirichletBC
 )
-from mpi4py import MPI
+#from mpi4py import MPI
 from InterfaceSolver.InterfaceSolver import InterfaceSolver
 from InterfaceSolver.options import opts_setup, DEFAULT_OPTIONS
 import time
@@ -15,7 +15,7 @@ class NonlinearInterfaceSolver(InterfaceSolver):
 
     def __init__(self, u, cell_func,
                  interface_func, comm=None,
-                 interface_value=1, cell_val=0, params=None, monitor=True):
+                 interface_value=1, cell_val=0, params=None, monitor=None):
         """
         This is init
         """
@@ -120,6 +120,7 @@ class NonlinearInterfaceSolver(InterfaceSolver):
     #     return True
 
     def J(self, snes, x, J, P):
+        if PETSc.Options().hasName('assembly_monitor') : PETSc.Sys.Print(f"Assembling jacobian ... ", end="")
         self.update_x(x)
         A0 = PETScMatrix()
         A1 = PETScMatrix()
@@ -149,6 +150,7 @@ class NonlinearInterfaceSolver(InterfaceSolver):
             bc.apply(J_)
 
         J.assemble()
+        if PETSc.Options().hasName('assembly_monitor') : PETSc.Sys.Print(f"done.", end="\n")
         return True
 
     def setup(self, a0, a1, a_interface,
@@ -223,7 +225,6 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         self.xx = self.A_petsc.createVecRight()
         self.xx.axpy(1.0, self.x_petsc)
         self.b_petsc = self.A_petsc.createVecLeft()
-        self.reshist = {}
         self.set_solver(params=self.params, monitor=self.monitor)
         self.snes.setFromOptions()
         self.snes.setUp()
@@ -234,9 +235,9 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         for subspace, sign in self.force_equality:
             self.assign_interface(self.x.vec(), self.x.vec(), subspace, sign)
         self.x.update_ghost_values()
-        return self.reshist, self.snes.getConvergedReason()
+        return
 
-    def set_solver(self, params=None, monitor=True):
+    def set_solver(self, params=None, monitor=None):
         self.snes = PETSc.SNES().create(self.comm)
         self.ksp = self.snes.getKSP()
         self.snes.setFunction(self.F, self.b_petsc)
@@ -244,11 +245,8 @@ class NonlinearInterfaceSolver(InterfaceSolver):
         self.snes.setSolution(self.xx)
         self.snes.computeFunction(self.xx, self.b_petsc)
         self.snes.computeJacobian(self.xx, self.A_petsc)
-        def monitor_func(snes, its, rnorm, *args, **kwargs):
-            self.reshist[its] = rnorm
-        if monitor is True:
-            #self.snes.cancelMonitor()
-            self.snes.setMonitor(monitor_func)
+        if monitor is not None:
+            self.snes.setMonitor(monitor)
         # set default parameters
         opts_setup(DEFAULT_OPTIONS)
         # if params has been set rewrite the DEFAULT_PARAMETERS
@@ -285,9 +283,9 @@ class SNESMonitor():
             self.print(s)
             self.print(self.line)
 
-    def info(self,s):
-        if MPI.COMM_WORLD.Get_rank() == 0:
-            info(s)
+    #def info(self,s):
+    #    if MPI.COMM_WORLD.Get_rank() == 0:
+    #        info(s)
 
 class KSPMonitor(object):
     def __init__(self, name='KSP'):
