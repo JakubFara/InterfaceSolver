@@ -27,12 +27,15 @@ class SaintVenantParameters:
 
 
 def grad_x(func, def_grad):
-    return df.grad(func) * df.inv(def_grad)
-
+    return df.dot( df.grad(func) , df.inv(def_grad) )
 
 def div_x(func, def_grad):
-    return df.tr(grad_x(func, def_grad))
+    return df.tr( grad_x(func, def_grad) )
 
+from ufl import indices
+def Tdiv_x(func, def_grad):
+    i,j,k = indices(3)
+    return( grad_x(func, def_grad)[...,i,i] )
 
 def navier_stokes_ale(
     w: df.Function,
@@ -61,12 +64,28 @@ def navier_stokes_ale(
     # deformation gradien
     cauchy_stress = 2 * parameters.mu * df.sym(grad_x(v, def_grad)) - p * identity
     determinant = df.det(def_grad)
-    return (
+
+    weak_form=(
         (rho * df.inner(k * (v - v0), v_)) * determinant * dx
         + df.inner(cauchy_stress, grad_x(v_, def_grad)) * determinant * dx
         + rho * df.inner(grad_x(v, def_grad) * (v - k * (u - u0)), v_) * determinant * dx
         + df.inner(div_x(v, def_grad), p_) * determinant * dx
     )
+
+    # grad-div stabilizace - mozna staci
+    graddiv_form=(
+        df.inner(div_x(v, def_grad), div_x(v_, def_grad)) * determinant * dx
+    )
+    
+    # supg - not ready!
+    #strong_form=(
+    #    (rho * df.inner(k * (v - v0), v_)) * determinant * dx
+    #    + df.inner(Tdiv_x(cauchy_stress, def_grad), v_) * determinant * dx
+    #    + rho * df.inner(grad_x(v, def_grad) * (v - k * (u - u0)), v_) * determinant * dx
+    #    + df.inner(div_x(v, def_grad), p_) * determinant * dx
+    #)
+    
+    return ( weak_form + df.Constant(100.0)*graddiv_form )
 
 
 def saint_venant(

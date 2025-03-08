@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from petsc4py.PETSc import Sys
 from petsc4py import PETSc
 
+import numpy as np
+
 from ufl import atan_2
 # from init_displacement import u_init, u_init_symmetric
 import argparse
@@ -206,7 +208,7 @@ if u_init != None:
         u_init.rename("u_init", "u_init")
         xdmf_u_init.write(u_init, 0)
  
-file_xml = df.File("bndry_marker.pvd")
+file_xml = df.File("{directory}/bndry_marker.pvd")
 file_xml << bndry_marker
 
 file_xml = df.File(f"{directory}/marker.pvd")
@@ -523,7 +525,12 @@ reasons_names = {v: k for k, v in reasons.items() if isinstance(v, int)}
 
 while t < t_end:
     Sys.Print(f"TIME STEP {n}:  {t=}")
-    inflow_expr.v = velocity(t)
+    #if t<2.0 :
+    #    #q=0.5*(1.0-np.cos(np.pi*t/2.0))
+    #    q=t/2.0 #0.5*(1.0-np.cos(np.pi*t/2.0))
+    #else :
+    #    q=1.0
+    inflow_expr.v = velocity(t) #*q
     converged = False
     #PETSc.Options().setValue('npc_snes_lag_jacobian', -2)
     #solver.snes.setFromOptions()
