@@ -33,7 +33,7 @@ df.parameters['form_compiler']['quadrature_degree'] = 8
 parser.add_argument(
     "--shear_modulus" , "-sm",
     help="shear modulus",
-    default=1e4,
+    default=8e4,
     type=float,
 )
 
