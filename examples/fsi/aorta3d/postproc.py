@@ -6,16 +6,16 @@ from numpy import pi
 mesh = df.Mesh()
 comm = mesh.mpi_comm()
 result_file = "result.h5"
-result_file_v = "result_v"
-result_file_u = "result_u"
-result_file_u_init = "result_u_init"
+#result_file_v = "result_v"
+#result_file_u = "result_u"
+#result_file_u_init = "result_u_init"
 # result_file_p = "results/tube3d/theta0.5/radius0.018/result.h5"
 # with df.HDF5File(comm, folder + result_file, "r") as hdf_file:
 #     hdf_file.read(mesh, "/mesh", False)
 # theta = 0.5
-theta = 1.0
-maximal_radius = 0.016
-mesh_level = 2
+theta = 0.5
+maximal_radius = 0
+mesh_level = 1
 
 
 class Parameters:
@@ -31,8 +31,8 @@ class Parameters:
 
 parameters = Parameters()
 
-folder = f"/usr/work/fara/aorta3d/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
-
+folder = f"results-stab1/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
+#folder = f"/usr/users/hron/WORK/GIT/fara/InterfaceSolver/examples/fsi/aorta3d/results/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
 labels = {
       "solid": 1,
       "fluid": 2,
@@ -49,7 +49,7 @@ labels = {
 }
 
 comm = df.MPI.comm_world
-with df.HDF5File(comm, f"data/aorta_refined_discontinuous_lev{mesh_level}_r{int(maximal_radius*1000)}.h5", "r") as h5_file:
+with df.HDF5File(comm, f"data/mesh_lev{mesh_level}_r16_refined/mesh_discontinuous.h5", "r") as h5_file:
 # with df.HDF5File(comm, "data/aorta_discontinuous.h5", "r") as h5_file:
     # first we need to create an empty mesh
     mesh = df.Mesh(comm)
@@ -84,9 +84,9 @@ u = df.Function(space_u)
 u_init = df.Function(space_u)
 p = df.Function(space_p)
 
-h5_file_v = H5FileWriter(result_file_v, comm, folder=folder)
-h5_file_u = H5FileWriter(result_file_u, comm, folder=folder)
-h5_file_u_init = H5FileWriter(result_file_u_init, comm, folder=folder)
+#h5_file_v = H5FileWriter(result_file_v, comm, folder=folder)
+#h5_file_u = H5FileWriter(result_file_u, comm, folder=folder)
+#h5_file_u_init = H5FileWriter(result_file_u_init, comm, folder=folder)
 # h5_file_p = H5FileWriter(result_file_read, comm)
 
 
@@ -163,7 +163,7 @@ def extract_quantites(t, mesh, bndry_marks, cell_marks, labels, theta, v, u, p, 
     area_in = int_ds(one, ds, F, n_ref, label=labels['outflow_f'])
     df.info(f"area_in - {area_in} = area_in - {area_out}")
 
-    quit()
+    #quit()
     # df.info(f"{area_wall} {area_out} {area_in}")
     parameters_dict['time'] = t
     parameters_dict['bulk_diss'] = (
@@ -232,17 +232,17 @@ def extract_quantites(t, mesh, bndry_marks, cell_marks, labels, theta, v, u, p, 
 with df.XDMFFile("p.xdmf") as xdmf_file_p:
     pass
 
-dt = 0.005
+dt = 0.01
 t = 0
 gamma=3.08
 reset = True
-for n in range(10000):
+for n in range(4,1200,4):
     df.info(f"{n}")
     t += dt
     with df.HDF5File(comm, folder + result_file, "r") as hdf_file:
         hdf_file.read(v, f"{n}/v")
         hdf_file.read(u, f"{n}/u")
-        hdf_file.read(u_init, f"{n}/u_init")
+        #hdf_file.read(u_init, f"{n}/u_init")
         hdf_file.read(p, f"{n}/p")
     # u_init = None
 

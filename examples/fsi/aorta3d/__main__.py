@@ -163,6 +163,7 @@ else:
         h5_file.read(interface_marker, "/interface_marker")
 
 
+#directory = f"./results-stab1/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
 directory = f"./results/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
 # function spaces
 Ep = df.FiniteElement("CG", mesh.ufl_cell(), 1)
@@ -389,6 +390,7 @@ options_snes = {
         #"view": "",
         "lag_jacobian": -2,
         'lag_jacobian_persists': 1,
+        'max_linear_solve_fail': -1,
     },
     "ksp_": {
         "type": "preonly",
@@ -543,7 +545,7 @@ while t < t_end:
     w0.assign(w)
 
     
-    if n%2==0 : # write every 8th step
+    if n%4==0 : # write every 8th step
         Sys.Print(f"  SAVE XDMF/h5 {n}:  {t=}")
         (v, u, p) = w.split(True)
         # save and plot
