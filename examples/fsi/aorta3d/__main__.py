@@ -332,6 +332,7 @@ options_snesnpc = {
         'converged_reason': '',
         'max_linear_solve_fail': -1,
         'max_fail': -1,
+        'max_funcs': -1,
         #"view": "",
     },
     "npc_": {
@@ -351,6 +352,7 @@ options_snesnpc = {
             'force_iteration': '',
             'max_linear_solve_fail': -1,
             'max_fail': -1,
+            'max_funcs': -1,
         },
         "ksp_": {
             "type": "preonly",
