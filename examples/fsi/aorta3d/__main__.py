@@ -341,7 +341,7 @@ options_snesnpc = {
             'linesearch_type': 'basic',
             'linesearch_damping': 0.8,
             'rtol': 0.99,   ### !!!!!!! this decides when to rebuild jacob
-            #'divergence_tolerance': 1.0,
+            'divergence_tolerance': 1.0e15,
             'max_it': 1,
             "lag_jacobian": -2,
             'lag_jacobian_persists': 1,
@@ -543,7 +543,7 @@ while t < t_end:
     w0.assign(w)
 
     
-    if n%8==0 : # write every 8th step
+    if n%2==0 : # write every 8th step
         Sys.Print(f"  SAVE XDMF/h5 {n}:  {t=}")
         (v, u, p) = w.split(True)
         # save and plot

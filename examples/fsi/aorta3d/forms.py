@@ -85,7 +85,7 @@ def navier_stokes_ale(
     #    + df.inner(div_x(v, def_grad), p_) * determinant * dx
     #)
     
-    return ( weak_form + df.Constant(100.0)*graddiv_form )
+    return ( weak_form + df.Constant(0.0)*graddiv_form )
 
 
 def saint_venant(
