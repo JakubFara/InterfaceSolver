@@ -5,7 +5,7 @@ from InterfaceSolver import interface
 from dataclasses import dataclass
 from petsc4py.PETSc import Sys
 from ufl import atan_2
-# from init_displacement import u_init, u_init_symmetric
+from init_displacement import u_init_valv, u_init_symmetric
 import argparse
 from mesh_partitioning import get_partitioned_mesh
 
@@ -76,6 +76,12 @@ parser.add_argument(
     type=float,
 )
 
+parser.add_argument(
+    "--valvsalve" , "-valv",
+    default=0,
+    type=int,
+)
+
 args = vars(parser.parse_args())
 maximal_radius = args["radius"]
 theta = args["theta"]
@@ -94,6 +100,7 @@ theta_scheme_partam = 1.0
 # maximal_radius = 0.016
 
 load_from_checkpoint = False
+
 @dataclass
 class Parameters:
     rho_s: float = 1.0e3
@@ -112,11 +119,20 @@ comm = df.MPI.comm_world
 rank = comm.Get_rank()
 # with df.HDF5File(comm, f"data/aorta_discontinuous_lev{mesh_level}.h5", "r") as h5_file:
 if refined == 0:
-    mesh = get_partitioned_mesh(
-        f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5',
-        f'data/mesh_lev{mesh_level}_r16/mesh_continuous.h5'
-    )
-    with df.HDF5File(comm, f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5', "r") as h5_file:
+    if args["valvsalve"] == 0:
+        mesh_file = f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5'
+        mesh = get_partitioned_mesh(
+            f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5',
+            f'data/mesh_lev{mesh_level}_r16/mesh_continuous.h5'
+        )
+    else:
+        mesh_file = f'data/mesh_lev{mesh_level}/mesh_discontinuous.h5'
+        mesh = get_partitioned_mesh(
+            f'data/mesh_lev{mesh_level}/mesh_discontinuous.h5',
+            f'data/mesh_lev{mesh_level}/mesh_continuous.h5'
+        )
+
+    with df.HDF5File(comm, mesh_file, "r") as h5_file:
         # first we need to create an empty mesh
         # mesh = df.Mesh(comm)
         # load the data stored in `/mesh` to the mesh
@@ -134,10 +150,22 @@ if refined == 0:
         h5_file.read(bndry_marker, "/facet_marker")
         h5_file.read(interface_marker, "/interface_marker")
 else:
-    mesh = get_partitioned_mesh(
-        f'data/mesh_lev{mesh_level}_r16_refined/mesh_discontinuous.h5',
-        f'data/mesh_lev{mesh_level}_r16_refined/mesh_continuous.h5'
-    )
+    if args["valvsalve"] == 0:
+        mesh_file = f'data/mesh_lev{mesh_level}_r16/mesh_discontinuous.h5'
+        mesh = get_partitioned_mesh(
+            f'data/mesh_lev{mesh_level}_r16_refined/mesh_discontinuous.h5',
+            f'data/mesh_lev{mesh_level}_r16_refined/mesh_continuous.h5'
+        )
+    else:
+        mesh_file = f'data/mesh_lev{mesh_level}_r16_refined_valv/mesh_discontinuous.h5'
+        mesh = get_partitioned_mesh(
+            f'data/mesh_lev{mesh_level}_r16_refined_valv/mesh_discontinuous.h5',
+            f'data/mesh_lev{mesh_level}_r16_refined_valv/mesh_continuous.h5'
+        )
+    # mesh = get_partitioned_mesh(
+    #     f'data/mesh_lev{mesh_level}_r16_refined/mesh_discontinuous.h5',
+    #     f'data/mesh_lev{mesh_level}_r16_refined/mesh_continuous.h5'
+    # )
     with df.HDF5File(comm, f'data/mesh_lev{mesh_level}_r16_refined/mesh_discontinuous.h5', "r") as h5_file:
         # first we need to create an empty mesh
         # mesh = df.Mesh(comm)
@@ -157,7 +185,8 @@ else:
         h5_file.read(interface_marker, "/interface_marker")
 
 
-directory = f"/usr/work/fara/aorta3d/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
+directory = f"/usr/work/fara/aorta3d/theta{theta}/radius{maximal_radius}_valv{args['valvsalve']}/g{parameters.mu_s}/ml{mesh_level}/"
+
 # function spaces
 Ep = df.FiniteElement("CG", mesh.ufl_cell(), 1)
 Eu = df.VectorElement("CG", mesh.ufl_cell(), 2)
@@ -174,7 +203,8 @@ w_ = df.TestFunction(V)
 (v0, u0, p0) = df.split(w0)
 (v_, u_, p_) = df.split(w_)
 # u_init = df.Function(V_u)
-u_init = None
+
+# u_init = None
 
 labels = {
       "solid": 1,
@@ -190,11 +220,18 @@ labels = {
       "solid_sign": "+",
       "fluid_sign": "-",
 }
-cell_val = labels["solid"]
+# u_init = None
+#
+if args["valvsalve"] == 1:
+    u_init = u_init_valv(
+        mesh, maximal_radius, radius, radius2,
+        bndry_marker, labels, order=2
+    )
+cell_val = labels["solid"]  # solid is plus
 
 
 if u_init != None:
-    with df.XDMFFile(comm, f"{directory}/u_init.xdmf") as xdmf_u_init:
+    with df.XDMFFile(comm, f"u_init.xdmf") as xdmf_u_init:
         xdmf_u_init.parameters["flush_output"] = True
         xdmf_u_init.parameters["functions_share_mesh"] = True
         u_init.rename("u_init", "u_init")

@@ -163,7 +163,6 @@ def extract_quantites(t, mesh, bndry_marks, cell_marks, labels, theta, v, u, p, 
     area_in = int_ds(one, ds, F, n_ref, label=labels['outflow_f'])
     df.info(f"area_in - {area_in} = area_in - {area_out}")
 
-    quit()
     # df.info(f"{area_wall} {area_out} {area_in}")
     parameters_dict['time'] = t
     parameters_dict['bulk_diss'] = (

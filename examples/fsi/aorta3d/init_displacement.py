@@ -151,7 +151,7 @@ class SymetricSinus(df.UserExpression):
 
 
 
-def u_init(mesh: df.Mesh, maximal_radius: float, radius:float, radius2: float, bndry_marker, labels_bndry, order: int = 2):
+def u_init_valv(mesh: df.Mesh, maximal_radius: float, radius:float, radius2: float, bndry_marker, labels_bndry, order: int = 2):
     r_max = maximal_radius
     # r_max = 0.016
     # r_max = 0.018
