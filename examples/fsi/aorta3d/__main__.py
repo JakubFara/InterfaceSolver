@@ -185,8 +185,12 @@ else:
         h5_file.read(interface_marker, "/interface_marker")
 
 
+<<<<<<< HEAD
 directory = f"/usr/work/fara/aorta3d/theta{theta}/radius{maximal_radius}_valv{args['valvsalve']}/g{parameters.mu_s}/ml{mesh_level}/"
 
+=======
+directory = f"/usr/work/tumak3am/interface_solver/theta{theta}/radius{maximal_radius}/g{parameters.mu_s}/ml{mesh_level}/"
+>>>>>>> b2c2520718fa6641c03caa39f86f267c9c99c829
 # function spaces
 Ep = df.FiniteElement("CG", mesh.ufl_cell(), 1)
 Eu = df.VectorElement("CG", mesh.ufl_cell(), 2)
@@ -205,6 +209,8 @@ w_ = df.TestFunction(V)
 # u_init = df.Function(V_u)
 
 # u_init = None
+
+df.info(f"{V.dim()=}")
 
 labels = {
       "solid": 1,
@@ -449,8 +455,6 @@ else:
         line = ch_file.readline().split(" ")
         n = int(line[0])
         t = float(line[1])
-
-
 
 # a0 += l0
 t += float(dt)
